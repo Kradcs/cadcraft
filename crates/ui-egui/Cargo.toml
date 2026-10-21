@@ -33,3 +33,7 @@ naga = { version = "30", features = ["wgsl-in", "glsl-out"] }
 [build-dependencies]
 serde_json = { workspace = true }
 toml = "1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+base64 = "0.22"
+hayro = { version = "0.8.0", default-features = false, features = ["embed-fonts", "embed-cmaps"] }

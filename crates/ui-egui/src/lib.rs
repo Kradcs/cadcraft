@@ -190,6 +190,7 @@ impl Default for UiState {
 pub struct Services {
     pub pick_open: Option<Box<dyn Fn() -> Option<String>>>,
     pub pick_save: Option<Box<dyn Fn(&str) -> Option<String>>>,
+    pub pick_agent_files: Option<Box<dyn Fn() -> Vec<String>>>,
 }
 
 pub struct CadApp {
@@ -593,8 +594,8 @@ impl CadApp {
         self.autosave_tick(ctx);
         menus::shortcuts(self, ctx);
         #[cfg(not(target_arch = "wasm32"))]
-        for f in ctx.input(|i| i.raw.dropped_files.clone()) {
-            let p = f.path().to_string_lossy().to_string();
+        for path in agent::dropped_files(self, ctx.input(|i| i.raw.dropped_files.iter().map(|f| f.path().to_owned()).collect()), ctx) {
+            let p = path.to_string_lossy().to_string();
             if !p.is_empty() {
                 self.open_path(&p);
             }

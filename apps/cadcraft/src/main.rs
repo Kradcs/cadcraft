@@ -128,6 +128,15 @@ pub fn install_io() {
 
 fn services() -> Services {
     Services {
+        pick_agent_files: Some(Box::new(|| {
+            rfd::FileDialog::new()
+                .add_filter("PDF, PNG, JPG, TXT", &["pdf", "png", "jpg", "jpeg", "txt"])
+                .pick_files()
+                .unwrap_or_default()
+                .into_iter()
+                .map(|p| p.to_string_lossy().into_owned())
+                .collect()
+        })),
         pick_open: Some(Box::new(|| {
             rfd::FileDialog::new()
                 .add_filter(i18n::t("Drawings (DWG, DXF)"), &["dwg", "dxf", "dwt"])

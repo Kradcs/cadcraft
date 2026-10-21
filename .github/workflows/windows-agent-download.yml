@@ -1,11 +1,11 @@
 name: Windows Codex portable download
 on:
   push:
-    branches: [codex/windows-agent-download-v3]
+    branches: [codex/windows-agent-attachments-v4]
 permissions:
   contents: write
 concurrency:
-  group: windows-codex-portable-v3
+  group: windows-codex-portable-v4
   cancel-in-progress: false
 jobs:
   package:
@@ -28,6 +28,11 @@ jobs:
         shell: pwsh
         run: |
           cargo +1.95.0 build --locked --release --target x86_64-pc-windows-msvc -p cadcraft -p cadcraft-cli
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Test attachments and the Codex panel on Windows
+        shell: pwsh
+        run: |
+          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-ui-egui --lib agent::
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Check the native drawing workflow
         shell: pwsh
@@ -57,13 +62,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           @'
-          Experimental Windows x64 CADCraft build with an integrated Codex conversation panel.
+          Experimental Windows x64 CADCraft build with an integrated Codex conversation panel and PDF, PNG, JPG/JPEG and TXT attachments.
 
-          Download CADCraft-Windows-portatil-v3.zip, extract it into a new directory and run ABRIR-CADCRAFT.cmd. Codex 0.163.0 is included. No Rust, Node.js or Visual Studio installation is needed on the destination PC.
+          Download CADCraft-Windows-portatil-v4.zip, extract it into a new directory and run ABRIR-CADCRAFT.cmd. Codex 0.163.0 is included. No Rust, Node.js or Visual Studio installation is needed on the destination PC.
 
-          Open Window > Codex Assistant (Janela > Assistente Codex), connect and complete ChatGPT sign-in in your browser. The native Windows CLI drawing workflow was smoke-tested on the GitHub runner. Interactive desktop operation and a signed-in model request still require user validation.
+          Open Window > Codex Assistant (Janela > Assistente Codex), connect and complete ChatGPT sign-in in your browser. Choose Attach files (Anexar arquivos), or drop files while the panel is open, enter a request and choose Send (Enviar). PDF pages are rendered as visual references, including scanned pages. Limits: 6 files, 20 MiB per file, 40 MiB source total, 12 pages per PDF and 16 visual pages/images per message. Other limits are explained in docs/codex-assistant.md.
+
+          Attachment decoding, protocol packets, file selection/removal, error handling and drawing tools were tested on the native Windows runner, along with the CLI drawing smoke test. Interactive desktop operation and a signed-in model request still require user validation.
 
           This is an experimental development build, not an official project release. SHA-256 checksum and licenses are included.
           '@ | Set-Content -LiteralPath "$env:RUNNER_TEMP/release-notes.md" -Encoding utf8
-          gh release create cadcraft-codex-windows-v3 ./dist/agent-portable/CADCraft-Windows-portatil-v3.zip ./dist/agent-portable/CADCraft-Windows-portatil-v3.zip.sha256 --repo '${{ github.repository }}' --target '${{ github.sha }}' --prerelease --title 'CADCraft com Codex - Windows x64 (teste v3)' --notes-file "$env:RUNNER_TEMP/release-notes.md"
+          gh release create cadcraft-codex-windows-v4 ./dist/agent-portable/CADCraft-Windows-portatil-v4.zip ./dist/agent-portable/CADCraft-Windows-portatil-v4.zip.sha256 --repo '${{ github.repository }}' --target '${{ github.sha }}' --prerelease --title 'CADCraft com Codex - Windows x64 (anexos v4)' --notes-file "$env:RUNNER_TEMP/release-notes.md"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

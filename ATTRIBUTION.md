@@ -23,6 +23,7 @@ Generated-in-code assets are original and have no file to list:
 
 | Asset | Author | Source | Licence | Notes |
 |---|---|---|---|---|
+| PDF rendering dependency resources (embedded by `hayro-interpret`, not copied into this repository) | PDFium Authors / Foxit Software Inc.; Compact ICC Profiles contributors | [Hayro 0.8.0](https://github.com/LaurenzV/hayro/tree/v0.8.0/hayro-interpret/assets) | BSD-3-Clause (Foxit fallback fonts); CC0-1.0 (CMYK profile); generated LAB profile | Standard PDF font fallback and color profiles; notices in `PDF-NOTICES.txt`; no Autodesk/Adobe/Avid artwork or fonts |
 | `assets/app-icon/hicolor/128x128/apps/ai.storyteller.cadcraft.png` | CADCraft contributors | generated from `assets/app-icon/cadcraft-1024.png` | MIT OR Apache-2.0 | Linux hicolor icon |
 | `assets/app-icon/hicolor/16x16/apps/ai.storyteller.cadcraft.png` | CADCraft contributors | generated from `assets/app-icon/cadcraft-1024.png` | MIT OR Apache-2.0 | Linux hicolor icon |
 | `assets/app-icon/hicolor/24x24/apps/ai.storyteller.cadcraft.png` | CADCraft contributors | generated from `assets/app-icon/cadcraft-1024.png` | MIT OR Apache-2.0 | Linux hicolor icon |
@@ -56,6 +57,7 @@ Generated-in-code assets are original and have no file to list:
 
 | Asset | Author | Source | Licence | Notes |
 |---|---|---|---|---|
+| PDF rendering dependency resources (embedded by `hayro-interpret`, not copied into this repository) | PDFium Authors / Foxit Software Inc.; Compact ICC Profiles contributors | [Hayro 0.8.0](https://github.com/LaurenzV/hayro/tree/v0.8.0/hayro-interpret/assets) | BSD-3-Clause (Foxit fallback fonts); CC0-1.0 (CMYK profile); generated LAB profile | Standard PDF font fallback and color profiles; notices in `PDF-NOTICES.txt`; no Autodesk/Adobe/Avid artwork or fonts |
 | `crates/ui-egui/src/i18n/uk.tsv` | @dmatviichuk | Original Ukrainian translations of CADCraft English strings | MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`) | No proprietary localization resources copied |
 | `crates/ui-egui/src/i18n/de.tsv` | the CADCraft contributors | Original German translations of CADCraft English strings | MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`) | No proprietary localization resources copied |
 | `crates/ui-egui/src/i18n/es.tsv` | @PedroGuille | Original Spanish translations of CADCraft English strings | MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`) | No proprietary localization resources copied |

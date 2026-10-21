@@ -7,6 +7,9 @@ use std::time::Duration;
 
 use serde_json::Value;
 
+// App-server notifications can echo the prepared visual references (up to 24 MiB).
+const MAX_MESSAGE_BYTES: usize = 32 * 1024 * 1024;
+
 pub struct Client {
     tx: SyncSender<Value>,
     pub rx: Receiver<Result<Value, String>>,
@@ -92,10 +95,10 @@ fn run(
             let mut reader = BufReader::new(output);
             loop {
                 let mut line = Vec::new();
-                let result = reader.by_ref().take(2 * 1024 * 1024 + 1).read_until(b'\n', &mut line);
+                let result = reader.by_ref().take(MAX_MESSAGE_BYTES as u64 + 1).read_until(b'\n', &mut line);
                 let value = match result {
                     Ok(0) => Err("Codex disconnected".into()),
-                    Ok(_) if line.len() > 2 * 1024 * 1024 => Err("Codex message exceeds 2 MiB".into()),
+                    Ok(_) if line.len() > MAX_MESSAGE_BYTES => Err("Codex message exceeds 32 MiB".into()),
                     Ok(_) => serde_json::from_slice(&line).map_err(|e| format!("Invalid Codex message: {e}")),
                     Err(e) => Err(e.to_string()),
                 };
@@ -166,6 +169,10 @@ mod tests {
         let packet = serde_json::json!({"id":1,"method":"initialize","params":{"text":"ação\nquoted \"text\""}});
         client.send(packet.clone()).unwrap();
         assert_eq!(client.rx.recv_timeout(Duration::from_secs(5)).unwrap().unwrap(), packet);
+        // A normal prepared image can exceed the old 2 MiB notification limit.
+        let visual = serde_json::json!({"type":"image", "url":format!("data:image/png;base64,{}", "A".repeat(3 * 1024 * 1024))});
+        client.send(visual.clone()).unwrap();
+        assert_eq!(client.rx.recv_timeout(Duration::from_secs(10)).unwrap().unwrap(), visual);
         let process = client.child.clone();
         drop(client);
         let deadline = std::time::Instant::now() + Duration::from_secs(5);

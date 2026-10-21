@@ -6,7 +6,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$Package = Join-Path $OutputDirectory 'CADCraft-Portatil-v3'
+$Package = Join-Path $OutputDirectory 'CADCraft-Portatil-v4'
 if (Test-Path $Package) { throw "Output already exists: $Package" }
 New-Item -ItemType Directory -Force $Package | Out-Null
 foreach ($Name in @('cadcraft.exe', 'cadcraft-cli.exe')) {
@@ -26,7 +26,7 @@ foreach ($Name in @('bin', 'codex-path', 'codex-package.json')) {
 $Resources = Join-Path $Codex 'codex-resources'
 New-Item -ItemType Directory -Force $Resources | Out-Null
 Get-ChildItem -LiteralPath (Join-Path $CodexVendorDirectory 'codex-resources') -File | Copy-Item -Destination $Resources
-foreach ($Name in @('LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE', 'ATTRIBUTION.md')) {
+foreach ($Name in @('LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE', 'ATTRIBUTION.md', 'PDF-NOTICES.txt')) {
     Copy-Item -LiteralPath (Join-Path $Root $Name) -Destination $Package
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'portable-launch.cmd') -Destination (Join-Path $Package 'ABRIR-CADCRAFT.cmd')
@@ -36,6 +36,12 @@ CADCraft com assistente Codex - Windows x64, versao de teste
 Extraia TODO o ZIP para uma pasta nova e abra ABRIR-CADCRAFT.cmd.
 No app: Janela > Assistente Codex > Conectar ao Codex > Entrar com o ChatGPT.
 Em ingles: Window > Codex Assistant.
+Para anexar: Anexar arquivos, ou arraste PDF/PNG/JPG/TXT com o painel aberto.
+Escreva o pedido e clique em Enviar. Arquivos so sao enviados nessa etapa.
+Limites: 6 arquivos, 20 MiB por arquivo, 40 MiB no total, PDF ate 12 paginas,
+ate 16 imagens/paginas por mensagem, TXT ate 160 mil bytes de texto por arquivo.
+PDFs sao convertidos em imagens de paginas; anexar nao importa geometria CAD.
+Use outro app para DOCX/XLSX, salvando como PDF ou TXT antes de anexar.
 Nao precisa instalar Rust, Visual Studio ou Node.js no computador de destino.
 Mantenha a pasta codex ao lado de cadcraft.exe. Recursos de voz nao incluidos.
 O login real e feito por voce no navegador, pelo Codex oficial.
@@ -49,8 +55,8 @@ $Licenses = @{
     'RIPGREP-UNLICENSE' = 'https://raw.githubusercontent.com/BurntSushi/ripgrep/14.1.1/UNLICENSE'
 }
 foreach ($Name in $Licenses.Keys) { Invoke-WebRequest -Uri $Licenses[$Name] -OutFile (Join-Path $Codex $Name) }
-$Zip = Join-Path $OutputDirectory 'CADCraft-Windows-portatil-v3.zip'
+$Zip = Join-Path $OutputDirectory 'CADCraft-Windows-portatil-v4.zip'
 [IO.Compression.ZipFile]::CreateFromDirectory($Package, $Zip)
 $Hash = (Get-FileHash -LiteralPath $Zip -Algorithm SHA256).Hash.ToLowerInvariant()
-"$Hash  CADCraft-Windows-portatil-v3.zip" | Set-Content -LiteralPath ($Zip + '.sha256') -Encoding ascii
+"$Hash  CADCraft-Windows-portatil-v4.zip" | Set-Content -LiteralPath ($Zip + '.sha256') -Encoding ascii
 Write-Host "Portable package: $Zip"

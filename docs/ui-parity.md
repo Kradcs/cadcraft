@@ -1,6 +1,6 @@
 # UI parity
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-20 · **Change:** minor (optional integrated Codex assistant; parity scores unchanged) · **Target:** Autodesk AutoCAD 2027 for Mac (26.0)
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-21 · **Change:** minor (Codex reference attachments; parity scores unchanged) · **Target:** Autodesk AutoCAD 2027 for Mac (26.0)
 
 How CADCraft's interaction compares with AutoCAD's: point entry, object snaps, tracking, dynamic
 input, grips, selection, the command line, chrome and navigation. A drafter's speed in AutoCAD
@@ -203,6 +203,7 @@ down-arrow options menu (DYNPROMPT), and DYNDIM.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-21 | minor | Added picker/drop reference attachments (PDF pages, PNG/JPEG, Unicode TXT) to the desktop Codex panel, background preparation, remove/clear controls and explicit size/page limits. Parity scores unchanged. |
 | 2026-10-20 | minor | Added an optional desktop Codex conversation panel (Window → Codex Assistant), ChatGPT sign-in through Codex app-server and drawing tools with Undo and drawing-identity checks; live signed-in model validation remains external. No AutoCAD parity score changes. |
 | 2026-10-13 | minor | Filled-region highlight boundaries are traversed in deterministic coordinate order, fixing dash-phase jumps on CPU hover/selection redraws and GPU highlight rebuilds; CPU dash-position, pixel and GPU mesh regressions |
 | 2026-10-14 | minor | Selection cycling (#1143): the list and badge of SELECTIONCYCLING, Shift+Space through overlapping objects (#1145) |

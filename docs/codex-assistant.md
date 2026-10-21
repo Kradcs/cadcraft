@@ -11,10 +11,8 @@ or modify geometry in the drawing that is open in CADCraft. For example:
 For the portable package, extract the entire ZIP into a new directory and run
 `ABRIR-CADCRAFT.cmd`. It sets the Codex executable path to the included official
 Windows binary; neither npm nor build tools are needed on the destination PC.
-Keep the `codex` directory alongside `cadcraft.exe`. `VERIFICAR.cmd` reports the
-versions of both executables if startup needs diagnosis. This is an experimental
-cross-compiled build, not an official signed release. Windows execution must be
-verified on the destination machine.
+Keep the `codex` directory alongside `cadcraft.exe`. The portable ZIP is built and tested on a native Windows GitHub runner. It is an
+experimental development build, not an official signed release.
 
 ## Windows installation from the source package
 
@@ -45,6 +43,38 @@ API key, or access token in the drawing or interface preferences. Codex manages
 its own authentication. The Codex executable uses the current user's Codex
 configuration. Requests and drawing inspection results are sent to the configured
 Codex model provider. Do not share drawings with that provider unless authorized.
+
+## Attach reference files
+
+Choose **Attach files** (**Anexar arquivos**) in the Codex panel, or drop files
+onto the application while the panel is open. You can mix PDF, PNG, JPG/JPEG and
+TXT files, review their names and sizes, remove individual files with **×**, or
+cancel/clear the selection. Enter your request and choose **Send**. Files are
+prepared locally in a background worker; their content is sent to the Codex
+provider only when you send the message. Selecting files does not modify the drawing.
+
+Images are decoded, resized to at most 1600 pixels on their longest edge and
+sent as PNG image inputs. Every PDF page is rendered to an image, including
+embedded scans, text and vector diagrams. PDF references are visual, not a native
+CAD import or a searchable text extraction; use TXT for long text and provide
+explicit dimensions for precise drafting. Password-protected, damaged or
+unsupported PDFs report errors. A PDF rendering warning rejects the file rather
+than silently sending an incomplete page. Export such pages as PNG/JPG if needed.
+
+Limits are checked before sending; exceeding one reports an error instead of
+silently truncating the attachment:
+
+- 6 files; 20 MiB per source file, 40 MiB source total.
+- 1–12 pages per PDF; at most 16 images/PDF pages combined per message.
+- PNG/JPEG inputs up to 32 megapixels; 24 MiB total prepared input.
+- TXT must use UTF-8 (optional BOM) or UTF-16 with BOM; at most 160,000 decoded
+  UTF-8 bytes per file and 240,000 total text bytes per message.
+
+DOCX, XLSX and other formats must first be exported to PDF or TXT. Dropped
+DWG/DXF files continue through the normal drawing-opening flow. The pending
+selection is an in-memory snapshot: later external changes to the original file
+do not alter it. Chat and attachment selections are not saved between app runs.
+Content is treated as reference data; drawing tool permissions are unchanged.
 
 ## What the agent can do
 
@@ -85,6 +115,6 @@ stopped, disallowed, wrong-drawing and interactive-command requests. A signed-in
 live request is a separate validation step requiring the user's Codex account.
 
 ```sh
-cargo test --locked -p cadcraft-ui-egui --lib agent::tests
+cargo test --locked -p cadcraft-ui-egui --lib agent::
 cargo check --locked --target wasm32-unknown-unknown -p cadcraft-ui-egui
 ```
