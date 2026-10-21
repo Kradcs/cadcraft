@@ -1,0 +1,69 @@
+name: Windows Codex portable download
+on:
+  push:
+    branches: [codex/windows-agent-download-v3]
+permissions:
+  contents: write
+concurrency:
+  group: windows-codex-portable-v3
+  cancel-in-progress: false
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      CARGO_BUILD_JOBS: '2'
+      CARGO_PROFILE_RELEASE_OPT_LEVEL: '1'
+      CARGO_PROFILE_RELEASE_LTO: 'false'
+      CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS: '-C target-feature=+crt-static'
+      CADCRAFT_REQUIRE_WINRES: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Rust
+        shell: pwsh
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --target x86_64-pc-windows-msvc
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Build Windows executables
+        shell: pwsh
+        run: |
+          cargo +1.95.0 build --locked --release --target x86_64-pc-windows-msvc -p cadcraft -p cadcraft-cli
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Check the native drawing workflow
+        shell: pwsh
+        run: |
+          $cli = "$pwd/target/x86_64-pc-windows-msvc/release/cadcraft-cli.exe"
+          & $cli --version
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & $cli run --metric --cmd 'circle {"center":[5,5],"radius":2}' --save "$env:RUNNER_TEMP/smoke.dxf" --export "$env:RUNNER_TEMP/smoke.png"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $drawing = (& $cli info "$env:RUNNER_TEMP/smoke.dxf" | ConvertFrom-Json)
+          if ($LASTEXITCODE -or $drawing.entityCount -ne 1 -or $drawing.counts.Circle -ne 1) { throw 'Native drawing smoke test failed' }
+      - name: Install official Codex and create portable package
+        shell: pwsh
+        run: |
+          $npmPrefix = Join-Path $env:RUNNER_TEMP 'codex-runtime'
+          npm.cmd install --prefix $npmPrefix --include=optional '@openai/codex@0.163.0'
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $matches = @(Get-ChildItem -LiteralPath "$npmPrefix/node_modules" -Recurse -Filter codex.exe -File | Where-Object { $_.FullName -match 'x86_64-pc-windows-msvc[\\/]bin[\\/]codex.exe$' })
+          if ($matches.Count -ne 1) { throw 'Cannot locate official Windows x64 Codex package' }
+          $vendor = Split-Path (Split-Path $matches[0].FullName)
+          & $matches[0].FullName --version
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./packaging/windows/portable-agent.ps1 -BinaryDirectory "$pwd/target/x86_64-pc-windows-msvc/release" -CodexVendorDirectory $vendor -OutputDirectory "$pwd/dist/agent-portable"
+      - name: Publish experimental download
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          @'
+          Experimental Windows x64 CADCraft build with an integrated Codex conversation panel.
+
+          Download CADCraft-Windows-portatil-v3.zip, extract it into a new directory and run ABRIR-CADCRAFT.cmd. Codex 0.163.0 is included. No Rust, Node.js or Visual Studio installation is needed on the destination PC.
+
+          Open Window > Codex Assistant (Janela > Assistente Codex), connect and complete ChatGPT sign-in in your browser. The native Windows CLI drawing workflow was smoke-tested on the GitHub runner. Interactive desktop operation and a signed-in model request still require user validation.
+
+          This is an experimental development build, not an official project release. SHA-256 checksum and licenses are included.
+          '@ | Set-Content -LiteralPath "$env:RUNNER_TEMP/release-notes.md" -Encoding utf8
+          gh release create cadcraft-codex-windows-v3 ./dist/agent-portable/CADCraft-Windows-portatil-v3.zip ./dist/agent-portable/CADCraft-Windows-portatil-v3.zip.sha256 --repo '${{ github.repository }}' --target '${{ github.sha }}' --prerelease --title 'CADCraft com Codex - Windows x64 (teste v3)' --notes-file "$env:RUNNER_TEMP/release-notes.md"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }

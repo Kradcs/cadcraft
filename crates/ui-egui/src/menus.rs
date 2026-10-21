@@ -15,6 +15,7 @@ const RECENT_CLEAR: &str = "ui.recent.clear";
 
 /// UI-only commands: (id, label, menu path, shortcut).
 pub const UI_COMMANDS: &[(&str, &str, &[&str], Option<&str>)] = &[
+    ("ui.agent", "Codex Assistant", &["Window", "Codex Assistant"], None),
     ("ui.spacemouse", "3D Mouse...", &["Tools", "3D Mouse..."], None),
     ("ui.spacemouse.calibrate", "Calibrate 3D Mouse", &[], None),
     ("ui.spacemouse.navigate", "3D Mouse Navigation", &[], None),
@@ -204,6 +205,10 @@ fn run_ui_command_inner(app: &mut CadApp, id: &str, params: &Value) -> Option<Re
                 return Some(crate::docking::command(app, false, &json!({"operation":"open", "panel":"toolSets"})));
             }
             toggle(&mut app.ui.show_toolsets, params);
+            Ok(Value::Null)
+        }
+        "ui.agent" => {
+            toggle(&mut app.agent.open, params);
             Ok(Value::Null)
         }
         "ui.toggle.palettes" => {

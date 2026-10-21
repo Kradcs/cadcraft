@@ -1247,3 +1247,23 @@
 	Not a number or distance: {text}	Não é um número nem uma distância: {text}
 	Select using two clicks only	Selecionar apenas com dois cliques
 	Define each corner of the selection window with a separate click.	Defina cada canto da janela de seleção com um clique separado.
+	Codex Assistant	Assistente Codex
+	Your assistant for the open drawing	Seu assistente para o desenho aberto
+	Codex executable	Executável do Codex
+	Connect to Codex	Conectar ao Codex
+	Install Codex CLI first. Your account is managed by Codex.	Instale primeiro a CLI do Codex. Sua conta é gerenciada pelo Codex.
+	Sign in with ChatGPT	Entrar com o ChatGPT
+	Disconnect	Desconectar
+	New conversation	Nova conversa
+	Continue sign-in in browser	Continuar login no navegador
+	Requests and drawing data are sent to Codex. Drawing changes use normal Undo.	Os pedidos e dados do desenho são enviados ao Codex. Use Desfazer para reverter alterações.
+	Ask Codex to draw or edit…	Peça ao Codex para desenhar ou editar…
+	Send	Enviar
+	Stop	Parar
+	Drawing: {title}	Desenho: {title}
+	Connected to Codex	Conectado ao Codex
+	Disconnected	Desconectado
+	Connecting to Codex…	Conectando ao Codex…
+	Sign in with ChatGPT to continue	Entre com o ChatGPT para continuar
+	Complete sign-in in your browser	Conclua o login no navegador
+	Working on your drawing…	Trabalhando no seu desenho…

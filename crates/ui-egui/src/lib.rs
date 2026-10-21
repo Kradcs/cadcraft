@@ -8,6 +8,7 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 #![forbid(unsafe_code)]
 
+pub mod agent;
 pub mod aliasdlg;
 pub mod animation;
 pub mod autosave;
@@ -192,6 +193,7 @@ pub struct Services {
 }
 
 pub struct CadApp {
+    pub agent: agent::State,
     pub system_languages: Vec<String>,
     /// Whether the operating system shows animations, as the host reads it; `None` when the OS
     /// states nothing or the host cannot ask ([`animation`]).
@@ -253,6 +255,7 @@ pub struct CadApp {
 impl CadApp {
     pub fn new(session: Session, services: Services) -> Self {
         CadApp {
+            agent: agent::State::default(),
             system_languages: Vec::new(),
             system_animations: None,
             session,
@@ -576,6 +579,7 @@ impl CadApp {
             self.shown_interface_scale = Some(scale);
         }
         self.drain_control(ctx);
+        agent::poll(self, ctx);
         self.finish_opening();
         self.opening.show(ctx);
         if !self.synthetic.is_empty() {
@@ -646,6 +650,7 @@ impl CadApp {
         if has_doc && !self.ui.show_toolsets {
             palettes::toolsets_strip(self, ui);
         }
+        agent::show(self, ui);
         egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.canvas)).show(ui, |ui| {
             if has_doc {
                 docking::show(self, ui);

@@ -200,6 +200,10 @@ The logger is `apps/cadcraft/src/logging.rs`; the web build logs to the browser 
 
 ## Drive it from agents, MCP and the CLI
 
+The desktop app also has an integrated **Window → Codex Assistant** conversation
+panel. Connect the Codex CLI with your ChatGPT account and ask it to act on the open
+drawing. See [setup, supported actions and limitations](docs/codex-assistant.md).
+
 ```sh
 # MCP server on stdio, headless:
 cadcraft-cli mcp
