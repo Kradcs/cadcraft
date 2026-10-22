@@ -92,6 +92,7 @@ pub struct State {
     pending_input: Option<Vec<Value>>,
     streamed_item: Option<String>,
     streamed_index: Option<usize>,
+    composing: bool,
     #[cfg(not(target_arch = "wasm32"))]
     client: Option<transport::Client>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -470,6 +471,60 @@ fn attachment_controls(state: &mut State, services: &crate::Services, ui: &mut e
     ui.small(crate::tl!("Attachments are sent to Codex when you choose Send."));
 }
 
+/// Plain Enter submits only from this editor. Shift+Enter remains an editing
+/// operation, including replacing a selection with a newline.
+fn prompt_editor(state: &mut State, ui: &mut egui::Ui) -> bool {
+    let id = ui.make_persistent_id("codex_prompt");
+    let focused = ui.memory(|memory| memory.has_focus(id));
+    let mut ime_event = false;
+    if focused {
+        ui.input(|input| {
+            // Raw events survive additional layout passes and TextEdit consumption.
+            for event in &input.raw.events {
+                if let egui::Event::Ime(event) = event {
+                    ime_event = true;
+                    match event {
+                        egui::ImeEvent::Preedit { text, .. } => state.composing = !text.is_empty(),
+                        egui::ImeEvent::Commit(_) => state.composing = false,
+                        _ => {}
+                    }
+                }
+            }
+        });
+    } else {
+        state.composing = false;
+    }
+    // Consume plain Enter even while composing: it must not survive an egui
+    // layout pass and accidentally submit immediately after an IME commit.
+    let enter = focused
+        && !state.busy
+        && ui.input_mut(|input| {
+            let mut pressed = false;
+            input.events.retain(|event| {
+                if let egui::Event::Key { key: egui::Key::Enter, pressed: true, repeat, modifiers, .. } = event
+                    && modifiers.is_none()
+                {
+                    pressed |= !repeat;
+                    false
+                } else {
+                    true
+                }
+            });
+            pressed
+        });
+    ui.add_enabled(
+        !state.busy,
+        egui::TextEdit::multiline(&mut state.input)
+            .id(id)
+            .hint_text(crate::tl!("Ask Codex to draw or edit…"))
+            .return_key(egui::KeyboardShortcut::new(egui::Modifiers::SHIFT, egui::Key::Enter))
+            .desired_rows(3)
+            .desired_width(f32::INFINITY)
+            .char_limit(32_000),
+    );
+    enter && !state.composing && !ime_event
+}
+
 pub fn show(app: &mut CadApp, ui: &mut egui::Ui) {
     if !app.agent.open {
         return;
@@ -524,50 +579,59 @@ pub fn show(app: &mut CadApp, ui: &mut egui::Ui) {
                 ui.label(crate::tf!("Drawing: {title}", title = title));
             }
             ui.small(crate::tl!("Requests and drawing data are sent to Codex. Drawing changes use normal Undo."));
-            let composer_height = 155.0;
-            #[cfg(not(target_arch = "wasm32"))]
-            let composer_height = composer_height
-                + 100.0
-                + (state.attachments.items.len() as f32 * 44.0).min(100.0)
-                + if state.attachments.error.is_some() { 50.0 } else { 0.0 };
-            egui::ScrollArea::vertical()
-                .id_salt("codex_messages")
-                .auto_shrink([false, false])
-                .stick_to_bottom(true)
-                .max_height((ui.available_height() - composer_height).max(20.0))
-                .show(ui, |ui| {
-                    for (role, text) in &state.messages {
-                        ui.strong(role);
-                        ui.add(egui::Label::new(text).wrap().selectable(true));
-                        ui.add_space(8.0);
-                    }
-                });
-            #[cfg(not(target_arch = "wasm32"))]
-            attachment_controls(&mut state, &app.services, ui);
-            ui.add_enabled(
-                !state.busy,
-                egui::TextEdit::multiline(&mut state.input)
-                    .hint_text(crate::tl!("Ask Codex to draw or edit…"))
-                    .desired_rows(3)
-                    .desired_width(f32::INFINITY)
-                    .char_limit(32_000),
-            );
-            ui.horizontal(|ui| {
+            // Allocate from the bottom: growing text/history/attachment content must
+            // never push Send and Stop outside the panel.
+            ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
                 let enabled = state.ready && state.authenticated && !state.busy && target.is_some() && !state.input.trim().is_empty();
                 #[cfg(not(target_arch = "wasm32"))]
                 let enabled = enabled && !state.attachments.is_loading();
-                if ui.add_enabled(enabled, egui::Button::new(crate::tl!("Send"))).clicked()
-                    && let Some((uid, _)) = target
+                let mut send = false;
+                ui.horizontal(|ui| {
+                    send = ui.add_enabled(enabled, egui::Button::new(crate::tl!("Send"))).clicked();
+                    if ui.add_enabled(state.busy, egui::Button::new(crate::tl!("Stop"))).clicked() {
+                        // Closing our child also prevents queued calls from touching the drawing.
+                        state.disconnect();
+                        state.note("Task stopped. Completed drawing actions remain available in Undo.");
+                    }
+                    if state.busy {
+                        ui.spinner();
+                    }
+                });
+                ui.small(crate::tl!("Enter to send · Shift+Enter for a new line"));
+                let height = (ui.available_height() * 0.35).clamp(40.0, 160.0);
+                let top_down = egui::Layout::top_down(egui::Align::Min);
+                // ScrollArea positions its content from the top. Give each area
+                // an explicit top-down rectangle inside the bottom-up parent.
+                ui.allocate_ui_with_layout(egui::vec2(ui.available_width(), height), top_down, |ui| {
+                    egui::ScrollArea::vertical().id_salt("codex_prompt_scroll").max_height(height).auto_shrink([false, false]).show(ui, |ui| {
+                        send |= prompt_editor(&mut state, ui) && enabled;
+                    });
+                });
+                #[cfg(not(target_arch = "wasm32"))]
                 {
+                    let height = (ui.available_height() * 0.45).clamp(0.0, 200.0);
+                    ui.allocate_ui_with_layout(egui::vec2(ui.available_width(), height), top_down, |ui| {
+                        egui::ScrollArea::vertical().id_salt("codex_reference_controls").max_height(height).show(ui, |ui| {
+                            attachment_controls(&mut state, &app.services, ui);
+                        });
+                    });
+                }
+                ui.allocate_ui_with_layout(ui.available_size(), top_down, |ui| {
+                    egui::ScrollArea::vertical()
+                        .id_salt("codex_messages")
+                        .auto_shrink([false, false])
+                        .stick_to_bottom(true)
+                        .max_height(ui.available_height().max(0.0))
+                        .show(ui, |ui| {
+                            for (role, text) in &state.messages {
+                                ui.strong(role);
+                                ui.add(egui::Label::new(text).wrap().selectable(true));
+                                ui.add_space(8.0);
+                            }
+                        });
+                });
+                if send && let Some((uid, _)) = target {
                     state.submit(uid);
-                }
-                if ui.add_enabled(state.busy, egui::Button::new(crate::tl!("Stop"))).clicked() {
-                    // Closing our child also prevents queued calls from touching the drawing.
-                    state.disconnect();
-                    state.note("Task stopped. Completed drawing actions remain available in Undo.");
-                }
-                if state.busy {
-                    ui.spinner();
                 }
             });
         },
@@ -633,6 +697,148 @@ mod tests {
         assert_eq!(state.input, "Use a referência");
         assert_eq!(state.attachments.items.len(), 1);
         assert!(state.status.contains("unavailable"));
+    }
+
+    fn composer_app() -> (CadApp, std::sync::mpsc::Receiver<Value>) {
+        let mut app = app();
+        let (client, wire) = transport::test_client();
+        app.agent = State {
+            open: true,
+            ready: true,
+            authenticated: true,
+            thread: Some("test-thread".into()),
+            client: Some(client),
+            input: "Desenhe uma sala com medidas.\n".repeat(300),
+            ..Default::default()
+        };
+        (app, wire)
+    }
+
+    fn composer_harness(app: CadApp, height: f32) -> egui_kittest::Harness<'static, CadApp> {
+        egui_kittest::Harness::builder().with_size(egui::vec2(1000.0, height)).build_ui_state(
+            |ui, app: &mut CadApp| {
+                show(app, ui);
+            },
+            app,
+        )
+    }
+
+    #[test]
+    fn long_prompt_keeps_send_visible_and_click_sends_all_text_with_attachments() {
+        use egui_kittest::kittest::Queryable;
+        let (mut app, wire) = composer_app();
+        let files = attachments::tests::Files::new();
+        app.agent.attachments = attachments::tests::selection(&[files.write("dimensions.txt", b"Width: 5 m")]);
+        app.agent.attachments.error = Some("An attachment error with wrapped text. ".repeat(100));
+        app.agent.messages.push(("Codex".into(), "A long previous response. ".repeat(500)));
+        let expected = app.agent.input.trim().to_owned();
+        let mut h = composer_harness(app, 520.0);
+        h.run_steps(4);
+        for height in [520.0, 800.0, 420.0] {
+            h.set_size(egui::vec2(1000.0, height));
+            h.run_steps(3);
+            let rect = h.get_by_label("Send").rect();
+            assert!(rect.min.y >= 0.0 && rect.max.y <= height, "Send outside {height}: {rect:?}");
+            assert!(rect.min.x >= 0.0 && rect.max.x <= 1000.0);
+            let attach = h.get_by_label("Attach files").rect();
+            let editor = h.get_by_role(egui::accesskit::Role::MultilineTextInput).rect();
+            assert!(attach.max.y <= editor.min.y, "references overlap prompt: {attach:?} / {editor:?}");
+        }
+        // A failed reference does not prevent retrying the successfully prepared ones.
+        h.get_by_label("Send").click();
+        h.run_steps(2);
+        let turn = wire.try_recv().unwrap();
+        assert_eq!(turn["method"], "turn/start");
+        assert!(turn["params"]["input"][0]["text"].as_str().unwrap().starts_with(&expected));
+        assert!(turn["params"]["input"].to_string().contains("Width: 5 m"));
+        assert!(h.state().agent.input.is_empty());
+        assert!(h.state().agent.busy);
+        assert!(wire.try_recv().is_err());
+    }
+
+    #[test]
+    fn enter_sends_selected_prompt_and_shift_enter_inserts_newline() {
+        use egui_kittest::kittest::Queryable;
+        let (app, wire) = composer_app();
+        let expected = app.agent.input.trim().to_owned();
+        let mut h = composer_harness(app, 600.0);
+        h.run_steps(3);
+        h.get_by_role(egui::accesskit::Role::MultilineTextInput).focus();
+        h.run_steps(2);
+        h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+        h.run_steps(2);
+        h.key_press(egui::Key::Enter);
+        h.run_steps(2);
+        let turn = wire.try_recv().unwrap();
+        assert_eq!(turn["method"], "turn/start");
+        assert_eq!(turn["params"]["input"][0]["text"], expected);
+        assert!(h.state().agent.input.is_empty());
+        assert!(wire.try_recv().is_err());
+
+        let (mut app, wire) = composer_app();
+        app.agent.input = "First line".into();
+        let mut h = composer_harness(app, 600.0);
+        h.run_steps(3);
+        h.get_by_role(egui::accesskit::Role::MultilineTextInput).focus();
+        h.run_steps(2);
+        h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::End);
+        h.run_steps(2);
+        h.key_press_modifiers(egui::Modifiers::SHIFT, egui::Key::Enter);
+        h.run_steps(2);
+        assert_eq!(h.state().agent.input, "First line\n");
+        assert!(!h.state().agent.busy);
+        assert!(wire.try_recv().is_err());
+    }
+
+    #[test]
+    fn enter_during_ime_composition_does_not_submit() {
+        use egui_kittest::kittest::Queryable;
+        let (mut app, wire) = composer_app();
+        app.agent.input = "Wall ".into();
+        let mut h = composer_harness(app, 600.0);
+        h.run_steps(3);
+        h.get_by_role(egui::accesskit::Role::MultilineTextInput).focus();
+        h.run_steps(2);
+        h.event(egui::Event::Ime(egui::ImeEvent::Preedit { text: "測".into(), active_range_chars: None }));
+        h.run_steps(2);
+        h.key_press(egui::Key::Enter);
+        h.run_steps(2);
+        assert!(wire.try_recv().is_err());
+        // Harness queues one event per frame by default. Feed these together
+        // to represent Enter confirming an IME candidate in the same frame.
+        h.input_mut().events.extend([
+            egui::Event::Ime(egui::ImeEvent::Commit("測".into())),
+            egui::Event::Key { key: egui::Key::Enter, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::NONE },
+        ]);
+        h.run_steps(2);
+        assert!(wire.try_recv().is_err(), "committing composition must not send");
+        h.key_up(egui::Key::Enter);
+        h.run_steps(1);
+        h.key_press(egui::Key::Enter);
+        h.run_steps(2);
+        assert_eq!(wire.try_recv().unwrap()["method"], "turn/start");
+    }
+
+    #[test]
+    fn enter_requires_prompt_focus_and_authenticated_idle_connection() {
+        use egui_kittest::kittest::Queryable;
+        for (ready, authenticated, busy) in [(false, false, false), (true, false, false), (true, true, true), (true, true, false)] {
+            let (mut app, wire) = composer_app();
+            app.agent.ready = ready;
+            app.agent.authenticated = authenticated;
+            app.agent.busy = busy;
+            let expected = app.agent.input.clone();
+            let mut h = composer_harness(app, 600.0);
+            h.run_steps(3);
+            if !(ready && authenticated && !busy) {
+                h.get_by_role(egui::accesskit::Role::MultilineTextInput).focus();
+                h.run_steps(2);
+            }
+            h.key_press(egui::Key::Enter);
+            h.run_steps(2);
+            assert_eq!(h.state().agent.input, expected);
+            assert!(wire.try_recv().is_err());
+        }
     }
 
     #[test]
@@ -753,7 +959,7 @@ mod visual_test {
         app.agent.ready = true;
         app.agent.authenticated = true;
         app.agent.status = "Connected to Codex".into();
-        app.agent.input = "Use a planta e as medidas anexadas para desenhar as paredes.".into();
+        app.agent.input = "Atue como um arquiteto especialista e desenhista técnico.\nDesenhe uma casa térrea com área de aproximadamente 140 m².\nUse paredes externas de 0,20 m e internas de 0,15 m.\n\n".repeat(100);
         let files = super::attachments::tests::Files::new();
         app.agent.attachments = super::attachments::tests::selection(&[
             files.pdf("Planta de referência.pdf", 2),

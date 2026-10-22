@@ -1,11 +1,11 @@
 name: Windows Codex portable download
 on:
   push:
-    branches: [codex/windows-modeling-v6]
+    branches: [codex/windows-agent-composer-v7]
 permissions:
   contents: write
 concurrency:
-  group: windows-codex-portable-v6
+  group: windows-codex-portable-v7
   cancel-in-progress: true
 jobs:
   package:
@@ -128,21 +128,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           @'
-          Experimental Windows x64 CADCraft with measured 3D construction and the integrated Codex assistant.
+          Experimental Windows x64 CADCraft with the integrated Codex assistant and a scrollable prompt editor.
 
-          Download CADCraft-Windows-portatil-v6.zip, extract everything into a new folder and run ABRIR-CADCRAFT.cmd. Official Codex 0.163.0 is included; no Rust, Node.js or Visual Studio installation is needed on the destination PC.
+          Download CADCraft-Windows-portatil-v7.zip, extract everything into a new folder and run ABRIR-CADCRAFT.cmd. Official Codex 0.163.0 is included; no Rust, Node.js or Visual Studio installation is needed on the destination PC.
 
-          Use File > New 3D Project (Arquivo > Novo projeto 3D), connect the Codex assistant and request a measured construction. Named boxes, cylinders, cones, spheres, concave-profile extrusion, full profile revolution and bounded union/subtract/intersect operations are available. Named objects can be edited later, with Undo/Redo. Selected closed 2D XY circles/polylines can be extruded with explicit units and height.
+          Long prompts now scroll inside a bounded editor. Send and Stop stay at the bottom of the Codex panel. Press Enter while the prompt field is focused to send the full message, including when its text is selected. Use Shift+Enter for a new line. Enter elsewhere does not submit the prompt; authentication, attachment preparation and in-progress task checks still apply.
 
-          Save as CAD3D to preserve the editable construction and retained source 2D entities. Export STL for mesh geometry, or STEP/STP for AP203 faceted B-rep geometry. STEP is export-only and contains planar facets, not analytic cylinders/spheres or an editable feature tree. Closed-shell checks reject unsupported topology. Imported STL still supports whole-model transforms rather than construction edits.
+          Reference PDF/PNG/JPG/TXT attachments, editable CAD3D construction, measured parts and office maquettes, 2D extrusion, bounded booleans, STL import/export and faceted STEP export remain available. Read MODELAGEM-3D.md for modeling scope and limits. No user-supplied models are included.
 
-          The Exemplos folder includes original synthetic flange (five through holes) and office maquette projects. These examples demonstrate geometry, not an engineering-approved design. Curves are faceted; check required tolerances, interference and fabrication suitability. No analytic solid kernel, fillets, threads, stress analysis, GD&T or manufacturing certification is provided. Read MODELAGEM-3D.md for scope, dimensions, command parameters and limits.
-
-          PDF/PNG/JPG/TXT reference attachments remain available. Plans/images do not automatically yield exact dimensions. Sign in with your own ChatGPT account; start a new conversation after switching documents. No user-supplied models are included.
-
-          Native Windows tests cover construction, boolean volumes, shell closure, CAD3D/STL/STEP, retained 2D source, edits, Undo/Redo, camera controls, agent tool calls, attachments and translations. Native CLI smoke tests reopen and edit the flange/office, export STEP/STL and verify the existing 2D workflow. A signed-in model request and interactive desktop use still require user validation.
+          UI regression tests cover long prompts, a visible and clickable Send button at multiple window heights, attachments, Enter with selected text, Shift+Enter and disabled/unfocused sending. Native Windows tests also cover existing modeling, mesh, attachment, translation and CLI workflows. Real ChatGPT sign-in remains user-managed.
 
           This is an experimental development build, not an official project release. SHA-256 checksum and licenses are included.
           '@ | Set-Content -LiteralPath "$env:RUNNER_TEMP/release-notes.md" -Encoding utf8
-          gh release create cadcraft-codex-windows-v6 ./dist/agent-portable/CADCraft-Windows-portatil-v6.zip ./dist/agent-portable/CADCraft-Windows-portatil-v6.zip.sha256 --repo '${{ github.repository }}' --target '${{ github.sha }}' --prerelease --title 'CADCraft com Codex - Windows x64 (Modelagem 3D v6)' --notes-file "$env:RUNNER_TEMP/release-notes.md"
+          gh release create cadcraft-codex-windows-v7 ./dist/agent-portable/CADCraft-Windows-portatil-v7.zip ./dist/agent-portable/CADCraft-Windows-portatil-v7.zip.sha256 --repo '${{ github.repository }}' --target '${{ github.sha }}' --prerelease --title 'CADCraft com Codex - Windows x64 (Painel Codex v7)' --notes-file "$env:RUNNER_TEMP/release-notes.md"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

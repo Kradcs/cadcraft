@@ -1,6 +1,6 @@
 # UI parity
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-22 · **Change:** minor (faceted 3D construction; parity scores unchanged) · **Target:** Autodesk AutoCAD 2027 for Mac (26.0)
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-22 · **Change:** minor (Codex prompt scrolling and keyboard sending; parity scores unchanged) · **Target:** Autodesk AutoCAD 2027 for Mac (26.0)
 
 How CADCraft's interaction compares with AutoCAD's: point entry, object snaps, tracking, dynamic
 input, grips, selection, the command line, chrome and navigation. A drafter's speed in AutoCAD
@@ -203,6 +203,7 @@ down-arrow options menu (DYNPROMPT), and DYNDIM.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-22 | minor | Bounded scrollable Codex prompt editor, bottom-anchored Send/Stop, independently scrollable references/history, Enter to send from the focused editor (including selected text), Shift+Enter for a newline. UI regression tests; parity scores unchanged. |
 | 2026-10-21 | minor | Added a standalone STL mesh workspace with a depth-buffered 3D view, orbit/pan/zoom, whole-mesh transforms, unit controls, Undo/Redo, export and Codex tools. No B-rep or sculpting support and no parity score change. |
 | 2026-10-21 | minor | Added picker/drop reference attachments (PDF pages, PNG/JPEG, Unicode TXT) to the desktop Codex panel, background preparation, remove/clear controls and explicit size/page limits. Parity scores unchanged. |
 | 2026-10-20 | minor | Added an optional desktop Codex conversation panel (Window → Codex Assistant), ChatGPT sign-in through Codex app-server and drawing tools with Undo and drawing-identity checks; live signed-in model validation remains external. No AutoCAD parity score changes. |

@@ -6,7 +6,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$Package = Join-Path $OutputDirectory 'CADCraft-Portatil-v6'
+$Package = Join-Path $OutputDirectory 'CADCraft-Portatil-v7'
 if (Test-Path $Package) { throw "Output already exists: $Package" }
 New-Item -ItemType Directory -Force $Package | Out-Null
 foreach ($Name in @('cadcraft.exe', 'cadcraft-cli.exe')) {
@@ -60,7 +60,10 @@ Modelos de usuarios nao incluidos; importacao STEP/OBJ/IGES nao implementada.
 
 ANEXOS DE REFERENCIA:
 Para anexar: Anexar arquivos, ou arraste PDF/PNG/JPG/TXT com o painel aberto.
-Escreva o pedido e clique em Enviar. Arquivos so sao enviados nessa etapa.
+Escreva o pedido e clique em Enviar, ou pressione Enter com o campo em foco.
+Shift+Enter insere uma nova linha. Enter envia o texto completo, mesmo selecionado.
+Textos longos tem rolagem interna; Enviar e Parar ficam no rodape do painel.
+Arquivos so sao enviados junto com o pedido.
 Limites: 6 arquivos, 20 MiB por arquivo, 40 MiB no total, PDF ate 12 paginas,
 ate 16 imagens/paginas por mensagem, TXT ate 160 mil bytes de texto por arquivo.
 PDFs sao convertidos em imagens de paginas; anexar nao importa geometria CAD.
@@ -78,8 +81,8 @@ $Licenses = @{
     'RIPGREP-UNLICENSE' = 'https://raw.githubusercontent.com/BurntSushi/ripgrep/14.1.1/UNLICENSE'
 }
 foreach ($Name in $Licenses.Keys) { Invoke-WebRequest -Uri $Licenses[$Name] -OutFile (Join-Path $Codex $Name) }
-$Zip = Join-Path $OutputDirectory 'CADCraft-Windows-portatil-v6.zip'
+$Zip = Join-Path $OutputDirectory 'CADCraft-Windows-portatil-v7.zip'
 [IO.Compression.ZipFile]::CreateFromDirectory($Package, $Zip)
 $Hash = (Get-FileHash -LiteralPath $Zip -Algorithm SHA256).Hash.ToLowerInvariant()
-"$Hash  CADCraft-Windows-portatil-v6.zip" | Set-Content -LiteralPath ($Zip + '.sha256') -Encoding ascii
+"$Hash  CADCraft-Windows-portatil-v7.zip" | Set-Content -LiteralPath ($Zip + '.sha256') -Encoding ascii
 Write-Host "Portable package: $Zip"
