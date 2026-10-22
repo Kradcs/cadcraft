@@ -4,8 +4,12 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 pub(crate) struct Files(pub PathBuf);
 impl Files {
     pub(crate) fn new() -> Self {
+        // Windows clocks can return the same timestamp to concurrent tests.
+        // Keep each live fixture distinct without relying on clock resolution.
+        static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let serial = NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let id = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
-        let path = std::env::temp_dir().join(format!("cadcraft-attachments-{}-{id}", std::process::id()));
+        let path = std::env::temp_dir().join(format!("cadcraft-attachments-{}-{id}-{serial}", std::process::id()));
         std::fs::create_dir(&path).unwrap();
         Self(path)
     }

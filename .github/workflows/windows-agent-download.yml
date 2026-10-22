@@ -1,7 +1,7 @@
 name: Windows Codex portable download
 on:
   push:
-    branches: [codex/windows-agent-composer-v7]
+    branches: [codex/windows-modeling-v6]
 permissions:
   contents: write
 concurrency:
@@ -27,6 +27,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: windows-portable-rust195
+          cache-on-failure: true
       - name: Build Windows executables
         shell: pwsh
         run: |
@@ -35,16 +36,17 @@ jobs:
       - name: Test measured construction, STEP, CAD3D, STL, UI and agent tools
         shell: pwsh
         run: |
-          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-geom -p cadcraft-io -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib model_
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-geom -p cadcraft-io -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib mesh
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-geom -p cadcraft-io -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib stl::
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-geom -p cadcraft-io -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib agent::
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-geom -p cadcraft-io -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib i18n::tests
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          foreach ($filter in @('model_', 'mesh', 'stl::', 'agent::', 'i18n::tests')) {
+            cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-geom -p cadcraft-io -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib $filter 2>&1 | Tee-Object -Variable testOutput
+            $testExit = $LASTEXITCODE
+            if ($testExit) {
+              $detail = (($testOutput | Select-Object -Last 80) -join "`n")
+              if ($detail.Length -gt 30000) { $detail = $detail.Substring($detail.Length - 30000) }
+              $detail = $detail.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+              Write-Host "::error title=Windows tests failed ($filter)::$detail"
+              exit $testExit
+            }
+          }
       - name: Check the native drawing workflow
         shell: pwsh
         run: |
