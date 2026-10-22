@@ -139,6 +139,7 @@ fn services() -> Services {
         })),
         pick_open: Some(Box::new(|| {
             rfd::FileDialog::new()
+                .add_filter(i18n::t("Supported CAD and STL files"), &["dwg", "dxf", "dwt", "stl", "svg", "svgz"])
                 .add_filter(i18n::t("Drawings (DWG, DXF)"), &["dwg", "dxf", "dwt"])
                 .add_filter(i18n::t("STL 3D Model"), &["stl"])
                 .add_filter(i18n::t("SVG drawings (SVG, SVGZ)"), &["svg", "svgz"])
