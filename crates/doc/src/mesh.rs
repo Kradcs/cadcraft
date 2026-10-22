@@ -11,6 +11,7 @@ pub struct Mesh {
     transform: Mat4,
     bounds: [Vec3; 2],
     pub unit: Unit,
+    pub model: Option<Arc<crate::model::Model>>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -57,9 +58,12 @@ impl Mesh {
         if triangles.is_empty() || triangles.len() > MAX_TRIANGLES {
             return Err("STL: expected 1 to 1,000,000 triangles".into());
         }
-        let mut mesh = Self { triangles: Arc::new(triangles), transform: Mat4::IDENTITY, bounds: [Vec3::ZERO; 2], unit: Unit::Unknown };
+        let mut mesh = Self { triangles: Arc::new(triangles), transform: Mat4::IDENTITY, bounds: [Vec3::ZERO; 2], unit: Unit::Unknown, model: None };
         mesh.update_bounds()?;
         Ok(mesh)
+    }
+    pub fn transformation(&self) -> Mat4 {
+        self.transform
     }
     pub fn count(&self) -> usize {
         self.triangles.len()
@@ -152,6 +156,9 @@ impl Mesh {
         self.apply(translation(center).mul(&r).mul(&translation(-center)))
     }
     pub fn set_unit(&mut self, unit: Unit, convert: bool) -> Result<(), String> {
+        if self.model.is_some() && unit == Unit::Unknown {
+            return Err("Editable projects require a physical unit".into());
+        }
         if convert {
             let from = self.unit.millimeters().ok_or("Define the original STL unit before converting units")?;
             let to = unit.millimeters().ok_or("Choose mm, cm, m or in for conversion")?;
@@ -160,6 +167,9 @@ impl Mesh {
                 s.m[i][i] = from / to;
             }
             self.apply(s)?;
+        }
+        if !convert && let Some(recipe) = self.model.as_mut() {
+            Arc::make_mut(recipe).unit = unit.name().into();
         }
         self.unit = unit;
         Ok(())

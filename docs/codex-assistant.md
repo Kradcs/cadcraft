@@ -126,3 +126,7 @@ live request is a separate validation step requiring the user's Codex account.
 cargo test --locked -p cadcraft-ui-egui --lib agent::
 cargo check --locked --target wasm32-unknown-unknown -p cadcraft-ui-egui
 ```
+
+## Measured 3D construction (v6)
+
+The agent can use `model.build`, `model.edit`, `model.add`, `model.remove`, `model.from2d` and `model.to2d`. Inspect `mesh.inspect` for named recipes and whole-model transforms; use `ui.mesh.view` to fit afterward. See [3D modeling](modeling-3d.md) for units, examples, faceted geometry limits and export scope.

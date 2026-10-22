@@ -139,8 +139,9 @@ fn services() -> Services {
         })),
         pick_open: Some(Box::new(|| {
             rfd::FileDialog::new()
-                .add_filter(i18n::t("Supported CAD and STL files"), &["dwg", "dxf", "dwt", "stl", "svg", "svgz"])
+                .add_filter(i18n::t("Supported CAD and STL files"), &["dwg", "dxf", "dwt", "stl", "cad3d", "svg", "svgz"])
                 .add_filter(i18n::t("Drawings (DWG, DXF)"), &["dwg", "dxf", "dwt"])
+                .add_filter(i18n::t("Editable 3D Project"), &["cad3d"])
                 .add_filter(i18n::t("STL 3D Model"), &["stl"])
                 .add_filter(i18n::t("SVG drawings (SVG, SVGZ)"), &["svg", "svgz"])
                 .add_filter(i18n::t("All files"), &["*"])
@@ -162,6 +163,12 @@ fn services() -> Services {
 /// first one. DWG must be listed for a `.dwg` name to survive, and a drawing opened from DWG
 /// then defaults to DWG; other names keep DXF first.
 fn filters_for_save(name: &str) -> Vec<(&'static str, &'static str)> {
+    if name.to_ascii_lowercase().ends_with(".step") {
+        return vec![("Faceted STEP", "step")];
+    }
+    if name.to_ascii_lowercase().ends_with(".cad3d") {
+        return vec![("Editable 3D Project", "cad3d")];
+    }
     if name.to_ascii_lowercase().ends_with(".stl") {
         return vec![("STL 3D Model", "stl")];
     }

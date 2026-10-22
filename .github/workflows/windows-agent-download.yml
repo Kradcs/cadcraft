@@ -1,11 +1,11 @@
 name: Windows Codex portable download
 on:
   push:
-    branches: [codex/windows-stl-models-v5]
+    branches: [codex/windows-modeling-v6]
 permissions:
   contents: write
 concurrency:
-  group: windows-codex-portable-v5
+  group: windows-codex-portable-v6
   cancel-in-progress: true
 jobs:
   package:
@@ -32,17 +32,18 @@ jobs:
         run: |
           cargo +1.95.0 build --locked --release --target x86_64-pc-windows-msvc -p cadcraft -p cadcraft-cli
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-      - name: Test STL parsing, mesh edits, rendering and UI on Windows
+      - name: Test measured construction, STEP, CAD3D, STL, UI and agent tools
         shell: pwsh
         run: |
-          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-io --lib stl::
+          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-geom -p cadcraft-io -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib model_
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib mesh
+          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-geom -p cadcraft-io -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib mesh
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-      - name: Test attachments and the Codex panel on Windows
-        shell: pwsh
-        run: |
-          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-ui-egui --lib agent::
+          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-geom -p cadcraft-io -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib stl::
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-geom -p cadcraft-io -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib agent::
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-geom -p cadcraft-io -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib i18n::tests
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Check the native drawing workflow
         shell: pwsh
@@ -94,6 +95,21 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           $model = (& $cli info "$env:RUNNER_TEMP/result.stl" | ConvertFrom-Json)
           if ($LASTEXITCODE -or $model.type -ne 'stlMesh' -or $model.triangles -ne 4 -or $model.unit -ne 'mm' -or [Math]::Abs($model.size.z - 100) -gt 0.001 -or [Math]::Abs($model.bounds.min.z) -gt 0.001) { throw 'Native STL smoke test failed' }
+      - name: Check editable flange and office on native Windows
+        shell: pwsh
+        run: |
+          $cli = "$pwd/target/x86_64-pc-windows-msvc/release/cadcraft-cli.exe"
+          & $cli run "$pwd/docs/examples/flange.cad3d" --cmd 'model.edit {"name":"flange_blank","changes":{"height":8}}' --save "$env:RUNNER_TEMP/flange.cad3d" --export "$env:RUNNER_TEMP/flange.step"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $part = (& $cli info "$env:RUNNER_TEMP/flange.cad3d" | ConvertFrom-Json)
+          if ($LASTEXITCODE -or $part.unit -ne 'mm' -or [Math]::Abs($part.size.z - 8) -gt 0.001 -or $part.recipe.nodes.Count -ne 11) { throw 'Editable flange smoke test failed' }
+          & $cli run "$env:RUNNER_TEMP/flange.cad3d" --export "$env:RUNNER_TEMP/flange.stl"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & $cli run "$pwd/docs/examples/office.cad3d" --cmd 'model.edit {"name":"wall_back","changes":{"size":[8,0.15,3.2]}}' --save "$env:RUNNER_TEMP/office.cad3d" --export "$env:RUNNER_TEMP/office.step"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $office = (& $cli info "$env:RUNNER_TEMP/office.cad3d" | ConvertFrom-Json)
+          if ($LASTEXITCODE -or $office.unit -ne 'm' -or [Math]::Abs($office.size.z - 3.3) -gt 0.001) { throw 'Editable office smoke test failed' }
+          if (!(Select-String -LiteralPath "$env:RUNNER_TEMP/flange.step" -Pattern 'FACETED_BREP\(' -Quiet)) { throw 'Missing STEP faceted geometry' }
       - name: Install official Codex and create portable package
         shell: pwsh
         run: |
@@ -112,19 +128,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           @'
-          Experimental Windows x64 CADCraft build with a standalone STL 3D workspace, Codex mesh tools and PDF/PNG/JPG/TXT reference attachments.
+          Experimental Windows x64 CADCraft with measured 3D construction and the integrated Codex assistant.
 
-          Download CADCraft-Windows-portatil-v5.zip, extract it into a new directory and run ABRIR-CADCRAFT.cmd. Codex 0.163.0 is included. No Rust, Node.js or Visual Studio installation is needed on the destination PC.
+          Download CADCraft-Windows-portatil-v6.zip, extract everything into a new folder and run ABRIR-CADCRAFT.cmd. Official Codex 0.163.0 is included; no Rust, Node.js or Visual Studio installation is needed on the destination PC.
 
-          Open File > Open STL Model (Arquivo > Abrir modelo STL), or drag an STL onto the app. Orbit with left-drag, pan with right-drag, and zoom with the wheel. Use the controls to move, rotate, resize, center and export the mesh. Undo/Redo and unsaved-change handling are included. Choose the original STL unit explicitly before physical-size requests.
+          Use File > New 3D Project (Arquivo > Novo projeto 3D), connect the Codex assistant and request a measured construction. Named boxes, cylinders, cones, spheres, concave-profile extrusion, full profile revolution and bounded union/subtract/intersect operations are available. Named objects can be edited later, with Undo/Redo. Selected closed 2D XY circles/polylines can be extruded with explicit units and height.
 
-          Open Window > Codex Assistant (Janela > Assistente Codex), connect and sign in with ChatGPT if needed. Start a new conversation after switching documents. The agent can inspect and transform the model and choose camera views. Saving stays under your control. This version edits the whole mesh; it does not sculpt details, generate characters, repair meshes or import OBJ/STEP/IGES. See docs/stl-models.md for scope and limits.
+          Save as CAD3D to preserve the editable construction and retained source 2D entities. Export STL for mesh geometry, or STEP/STP for AP203 faceted B-rep geometry. STEP is export-only and contains planar facets, not analytic cylinders/spheres or an editable feature tree. Closed-shell checks reject unsupported topology. Imported STL still supports whole-model transforms rather than construction edits.
 
-          Existing PDF/PNG/JPG/TXT reference attachments remain available in the conversation panel. STL files open locally in their own model tabs, rather than being sent as conversation attachments. No user-supplied models are bundled.
+          The Exemplos folder includes original synthetic flange (five through holes) and office maquette projects. These examples demonstrate geometry, not an engineering-approved design. Curves are faceted; check required tolerances, interference and fabrication suitability. No analytic solid kernel, fillets, threads, stress analysis, GD&T or manufacturing certification is provided. Read MODELAGEM-3D.md for scope, dimensions, command parameters and limits.
 
-          STL parsing, round trips, unit conversions, geometry edits, Undo/Redo, depth ordering, UI controls and agent tools were tested on the native Windows runner. Native CLI smoke tests also verify STL import/transform/save/reopen and the existing 2D DXF/PNG workflow. Interactive desktop operation and a signed-in model request still require user validation.
+          PDF/PNG/JPG/TXT reference attachments remain available. Plans/images do not automatically yield exact dimensions. Sign in with your own ChatGPT account; start a new conversation after switching documents. No user-supplied models are included.
+
+          Native Windows tests cover construction, boolean volumes, shell closure, CAD3D/STL/STEP, retained 2D source, edits, Undo/Redo, camera controls, agent tool calls, attachments and translations. Native CLI smoke tests reopen and edit the flange/office, export STEP/STL and verify the existing 2D workflow. A signed-in model request and interactive desktop use still require user validation.
 
           This is an experimental development build, not an official project release. SHA-256 checksum and licenses are included.
           '@ | Set-Content -LiteralPath "$env:RUNNER_TEMP/release-notes.md" -Encoding utf8
-          gh release create cadcraft-codex-windows-v5 ./dist/agent-portable/CADCraft-Windows-portatil-v5.zip ./dist/agent-portable/CADCraft-Windows-portatil-v5.zip.sha256 --repo '${{ github.repository }}' --target '${{ github.sha }}' --prerelease --title 'CADCraft com Codex - Windows x64 (STL 3D v5)' --notes-file "$env:RUNNER_TEMP/release-notes.md"
+          gh release create cadcraft-codex-windows-v6 ./dist/agent-portable/CADCraft-Windows-portatil-v6.zip ./dist/agent-portable/CADCraft-Windows-portatil-v6.zip.sha256 --repo '${{ github.repository }}' --target '${{ github.sha }}' --prerelease --title 'CADCraft com Codex - Windows x64 (Modelagem 3D v6)' --notes-file "$env:RUNNER_TEMP/release-notes.md"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

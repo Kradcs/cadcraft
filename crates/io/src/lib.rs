@@ -5,6 +5,7 @@
 /// What a DXF file holds that CADCraft doesn't model, kept and written back (#528).
 mod dxf_raw;
 
+pub mod cad3d;
 mod dxf_ext;
 mod dxf_image;
 mod dxf_mleader;
@@ -14,6 +15,7 @@ mod dxf_write;
 mod dxf_xref;
 pub mod pdf;
 pub mod plotter;
+pub mod step;
 pub mod stl;
 pub mod svg;
 mod svg_read;
@@ -61,6 +63,9 @@ fn ext(name: &str) -> String {
 /// Read a drawing; the format comes from the content (DXF ASCII/binary, DWG) or the name
 /// (SVG and gzip-compressed SVGZ).
 pub fn read(bytes: &[u8], name: &str) -> Result<Drawing> {
+    if ext(name) == "cad3d" || cad3d::is_ours(bytes) {
+        return cad3d::read(bytes).map_err(IoError::Format);
+    }
     if ext(name) == "stl" || stl::is_ours(bytes) {
         return stl::read(bytes).map_err(IoError::Format);
     }
@@ -89,10 +94,14 @@ pub fn write(d: &Drawing, name: &str) -> Result<Vec<u8>> {
 /// DXF only; asking for it with another format is an error.
 pub fn write_with(d: &Drawing, name: &str, opts: &SaveOptions) -> Result<Vec<u8>> {
     if d.mesh.is_some() {
-        return if ext(name) == "stl" {
+        return if matches!(ext(name).as_str(), "step" | "stp") {
+            step::write(d).map_err(IoError::Format)
+        } else if ext(name) == "cad3d" {
+            cad3d::write(d).map_err(IoError::Format)
+        } else if ext(name) == "stl" {
             stl::write(d).map_err(IoError::Format)
         } else {
-            Err(IoError::Format("Save this mesh as STL; converting it to a 2D drawing would lose the model".into()))
+            Err(IoError::Format("Save as CAD3D (editable project) or STL (geometry); a 2D format would lose the model".into()))
         };
     }
     let version = opts.version.unwrap_or_else(|| save_version(d));

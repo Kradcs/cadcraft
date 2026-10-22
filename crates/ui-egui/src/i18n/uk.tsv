@@ -1397,3 +1397,14 @@
 	3D Model Units	Одиниці 3D-моделі
 	Not specified	Не задано
 	Supported CAD and STL files	Підтримувані файли CAD та STL
+	Add 3D Object	Додати 3D-об’єкт
+	Build 3D Project	Побудувати 3D-проєкт
+	Edit 3D Object	Редагувати 3D-об’єкт
+	Remove 3D Object	Видалити 3D-об’єкт
+	Return to Source 2D	Повернутися до вихідного 2D
+	Extrude 2D Contours	Витягнути 2D-контури
+	Export 3D STL...	Експортувати 3D STL...
+	Export Faceted STEP...	Експортувати гранований STEP...
+	Extrude Selected 2D...	Витягнути вибрані 2D-контури...
+	New 3D Project	Новий 3D-проєкт
+	Project coordinate unit	Одиниця координат проєкту

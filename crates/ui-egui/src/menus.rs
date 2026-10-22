@@ -16,6 +16,10 @@ const RECENT_CLEAR: &str = "ui.recent.clear";
 /// UI-only commands: (id, label, menu path, shortcut).
 pub const UI_COMMANDS: &[(&str, &str, &[&str], Option<&str>)] = &[
     ("ui.mesh.open", "Open STL Model...", &["File", "Open STL Model..."], None),
+    ("ui.model.new", "New 3D Project", &["File", "New 3D Project"], None),
+    ("ui.model.extrude", "Extrude Selected 2D...", &["Tools", "Extrude Selected 2D..."], None),
+    ("ui.model.step", "Export Faceted STEP...", &["File", "Export Faceted STEP..."], None),
+    ("ui.model.export", "Export 3D STL...", &["File", "Export 3D STL..."], None),
     ("ui.mesh.view", "3D Model View", &[], None),
     ("ui.agent", "Codex Assistant", &["Window", "Codex Assistant"], None),
     ("ui.spacemouse", "3D Mouse...", &["Tools", "3D Mouse..."], None),
@@ -148,6 +152,28 @@ fn run_ui_command_inner(app: &mut CadApp, id: &str, params: &Value) -> Option<Re
             }
             Ok(json!({"interfaceLanguage": preference.code(), "shown": shown}))
         }
+        "ui.model.new" => {
+            let result = app.session.execute("new", &json!({})).map_err(|e| e.to_string());
+            if let Err(e) = result {
+                return Some(Err(e));
+            }
+            return Some(app.run("model.build", json!({"version":1,"unit":"mm","nodes":[{"name":"base","kind":"box","size":[100,60,10]}]})));
+        }
+        "ui.model.extrude" => {
+            app.meshview.extrude_dialog = true;
+            Ok(Value::Null)
+        }
+        "ui.model.export" | "ui.model.step" => {
+            if !app.session.doc().is_ok_and(|d| d.mesh.is_some()) {
+                return Some(Err("Open or create a 3D model first".into()));
+            }
+            let format = if id == "ui.model.step" { "step" } else { "stl" };
+            let result = app.services.pick_save.as_ref().and_then(|f| f(&format!("Model.{format}")));
+            if let Some(path) = result {
+                return Some(app.run("export", json!({"path":path,"format":format})));
+            }
+            Ok(Value::Null)
+        }
         "ui.mesh.view" => return Some(crate::meshview::command(app, params)),
         "ui.mesh.open" => {
             if let Some(path) =
@@ -184,7 +210,10 @@ fn run_ui_command_inner(app: &mut CadApp, id: &str, params: &Value) -> Option<Re
             let title = app.session.state().map(|s| s.title.clone()).ok();
             let name = if app.session.doc().is_ok_and(|d| d.mesh.is_some()) {
                 let stem = title.as_deref().and_then(|t| std::path::Path::new(t).file_stem()).and_then(|s| s.to_str()).unwrap_or("Model");
-                format!("{stem}.stl")
+                format!(
+                    "{stem}.{}",
+                    if app.session.doc().is_ok_and(|d| d.mesh.as_ref().is_some_and(|m| m.model.is_some())) { "cad3d" } else { "stl" }
+                )
             } else {
                 app.ui.save_format.suggested_name(title.as_deref())
             };

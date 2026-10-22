@@ -74,3 +74,7 @@ The full `cargo xtask ci` gate currently stops on pre-existing Clippy warnings i
 file-lifecycle tests, desktop/wasm compilation, formatting, assets and dependency
 layer checks are run separately. The Windows download workflow requires native
 feature tests and both STL and 2D file smoke tests before publication.
+
+## v6 measured construction
+
+Imported STL remains a whole-mesh workflow. New editable CAD3D projects additionally support named primitives, extrusions, revolutions, faceted boolean operations and STEP export; see [3D modeling](modeling-3d.md). These are not analytic CAD solids.

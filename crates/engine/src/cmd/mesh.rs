@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 pub(crate) fn allowed(id: &str) -> bool {
     id.starts_with("mesh.")
+        || id.starts_with("model.")
         || matches!(
             id,
             "open"
@@ -24,6 +25,7 @@ pub(crate) fn allowed(id: &str) -> bool {
                 | "document.bytes"
                 | "commands"
                 | "recover"
+                | "export"
         )
 }
 fn enabled(s: &Session) -> std::result::Result<(), String> {
@@ -52,7 +54,7 @@ fn inspect(s: &mut Session, _: &Value) -> Result<Value> {
     let [min, max] = m.bounds();
     let size = m.size();
     Ok(
-        json!({"type":"stlMesh","triangles":m.count(),"unit":m.unit.name(),"bounds":{"min":min,"max":max},"size":size,"note":"STL is a triangle mesh, without textures or parametric CAD features. Set its original unit explicitly before physical measurements."}),
+        json!({"type":"stlMesh","triangles":m.count(),"unit":m.unit.name(),"bounds":{"min":min,"max":max},"size":size,"recipe":m.model,"transform":m.transformation(),"note":"Faceted triangle geometry. recipe contains editable named construction nodes when available. Imported STL has no intrinsic unit. No analytic B-rep, fillets or manufacturing certification."}),
     )
 }
 pub(super) fn specs() -> Vec<CommandSpec> {

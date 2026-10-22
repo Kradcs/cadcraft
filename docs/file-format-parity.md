@@ -1,6 +1,6 @@
 # File-format parity
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-21 · **Change:** minor (standalone STL workspace; scores unchanged) · **Target:** Autodesk AutoCAD 2027
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-22 · **Change:** minor (faceted measured 3D construction; scores unchanged) · **Target:** Autodesk AutoCAD 2027
 
 Every format AutoCAD 2027 reads or writes, with CADCraft's support, fidelity and tests. Work
 items are in [gaps.md](gaps.md#file-formats); the weighted score feeds
@@ -73,7 +73,9 @@ on read with a note, so such files no longer exceed the DXF limit (#1482). **DWG
 
 ASCII and binary STL can be opened in a dedicated 3D mesh document, transformed
 and saved as binary STL, with Undo/Redo and mesh autosaves. This is whole-mesh
-support, not a B-rep/solid modeller or 3D DXF/DWG support. See [STL workspace](stl-models.md).
+support. v6 additionally supports editable CAD3D construction recipes and export-only
+faceted STEP, without an analytic solid kernel or 3D DXF/DWG support. See
+[STL workspace](stl-models.md) and [3D construction](modeling-3d.md).
 The remaining exchange-format estimates and parity scores have not been re-measured.
 
 ### DXF content: read and write by object type
@@ -160,3 +162,5 @@ our output in AutoCAD black-box.
 | 2026-10-11 | minor | DXF (ASCII and binary) and DWG saved at 2000–2018, 2018 by default (#421) |
 | 2026-10-10 | minor | WIPEOUT and gradients written since #147/#162; other save losses remain (#201, #204, #208, #209, #213, #223) |
 | 2026-10-10 | major | First file-format parity doc: DWG and DXF version by version, per-object read/write, other formats |
+
+| 2026-10-22 | minor | Experimental measured faceted construction, named editable CAD3D recipes, 2D extrusion, revolution, bounded boolean operations and faceted STEP export; see `modeling-3d.md`. No analytic solid kernel or parity score change. |

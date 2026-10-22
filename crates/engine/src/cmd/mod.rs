@@ -25,6 +25,7 @@ mod lisp;
 pub(crate) mod mesh;
 mod mleader_content;
 mod mleader_edit;
+mod model;
 mod modify;
 mod modify2;
 mod mtext_opts;
@@ -178,6 +179,7 @@ pub fn command_specs() -> &'static [CommandSpec] {
         let mut v = Vec::new();
         v.extend(file::specs());
         v.extend(mesh::specs());
+        v.extend(model::specs());
         v.extend(file::alias_specs());
         v.extend(audit::specs());
         v.extend(edit::specs());

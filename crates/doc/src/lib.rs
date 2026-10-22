@@ -14,6 +14,7 @@ mod gdt;
 mod header;
 pub mod library;
 pub mod mesh;
+pub mod model;
 mod plotstyle;
 mod plotter;
 mod refedit;

@@ -325,6 +325,9 @@ impl CadApp {
             return r;
         }
         let r = self.session.execute(id, &params).map_err(|e| e.to_string());
+        if r.is_ok() && id.starts_with("model.") {
+            self.ui.start_tab = false;
+        }
         if let Ok(v) = &r
             && let Some(m) = v.get("message").and_then(Value::as_str)
         {
@@ -664,6 +667,7 @@ impl CadApp {
                 chrome::start_page(self, ui);
             }
         });
+        meshview::dialogs(self, ui.ctx());
         dialogs::show(self, ui.ctx());
         palettes::patterns::prompt_picker(self, ui.ctx());
         closing::prompt(self, ui.ctx());

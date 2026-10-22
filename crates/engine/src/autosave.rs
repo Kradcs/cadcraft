@@ -335,7 +335,16 @@ mod native {
     type WriteHook = fn(&Drawing, &str) -> std::result::Result<Vec<u8>, String>;
 
     fn write_file(write: WriteHook, doc: &Drawing, path: &str) -> std::result::Result<(), String> {
-        let bytes = write(doc, if doc.mesh.is_some() { "autosave.stl" } else { "autosave.dxf" })?;
+        let bytes = write(
+            doc,
+            if doc.mesh.as_ref().is_some_and(|m| m.model.is_some()) {
+                "autosave.cad3d"
+            } else if doc.mesh.is_some() {
+                "autosave.stl"
+            } else {
+                "autosave.dxf"
+            },
+        )?;
         if let Some(dir) = Path::new(path).parent() {
             std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
         }

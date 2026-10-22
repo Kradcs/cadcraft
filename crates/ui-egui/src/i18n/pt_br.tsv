@@ -1305,3 +1305,26 @@
 	3D Model Units	Unidades do modelo 3D
 	Not specified	Não definida
 	Supported CAD and STL files	Arquivos CAD e STL compatíveis
+	3D Modeling	Modelagem 3D
+	New 3D Project	Novo projeto 3D
+	Editable 3D Project	Projeto 3D editável
+	Save Project As...	Salvar projeto como...
+	Export 3D STL...	Exportar STL 3D...
+	Export Faceted STEP...	Exportar STEP facetado...
+	Construction objects	Objetos da construção
+	Edit dimensions by name in Codex, or edit the selected object's JSON fields below.	Peça alterações por nome ao Codex ou edite os campos JSON do objeto selecionado abaixo.
+	Apply object changes	Aplicar alterações no objeto
+	Reload object fields	Recarregar campos do objeto
+	Objects not consumed by booleans are separate volumes. Unite them for a single part.	Objetos não usados em booleanas são volumes separados. Una-os para criar uma peça única.
+	Curved surfaces are faceted. Check tolerances before fabrication.	Superfícies curvas são facetadas. Confira as tolerâncias antes da fabricação.
+	Extrude Selected 2D...	Extrudar seleção 2D...
+	Select closed circles or polylines in the XY plane first. Enter height and the drawing's unit.	Selecione círculos ou polilinhas fechadas no plano XY. Informe a altura e a unidade do desenho.
+	Height:	Altura:
+	Create extrusion	Criar extrusão
+	Add 3D Object	Adicionar objeto 3D
+	Build 3D Project	Construir projeto 3D
+	Edit 3D Object	Editar objeto 3D
+	Remove 3D Object	Remover objeto 3D
+	Return to Source 2D	Retornar ao desenho 2D
+	Extrude 2D Contours	Extrudar contornos 2D
+	Project coordinate unit	Unidade das coordenadas do projeto

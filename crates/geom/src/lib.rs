@@ -14,6 +14,7 @@ mod intersect;
 mod mat;
 mod nurbs;
 pub mod region;
+pub mod solid;
 mod spline;
 mod spline_fit;
 mod vec;

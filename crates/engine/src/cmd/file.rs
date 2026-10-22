@@ -263,7 +263,7 @@ pub struct ReadFile {
 #[cfg(not(target_arch = "wasm32"))]
 fn read_path(path: &str) -> std::result::Result<Vec<u8>, String> {
     use std::io::Read;
-    if std::path::Path::new(path).extension().is_some_and(|e| e.eq_ignore_ascii_case("stl")) {
+    if std::path::Path::new(path).extension().is_some_and(|e| e.eq_ignore_ascii_case("stl") || e.eq_ignore_ascii_case("cad3d")) {
         let file = std::fs::File::open(path).map_err(|e| format!("{path}: {e}"))?;
         let mut bytes = Vec::new();
         file.take(64 * 1024 * 1024 + 1).read_to_end(&mut bytes).map_err(|e| format!("{path}: {e}"))?;
@@ -563,7 +563,7 @@ pub fn drops_unknown(path: &str) -> bool {
 /// Whether `path` is saved as a drawing (DXF, DWG) rather than exported as an image.
 fn is_drawing_file(path: &str) -> bool {
     let ext = std::path::Path::new(path).extension().map(|e| e.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
-    matches!(ext.as_str(), "dxf" | "dwg" | "stl" | "dwt" | "")
+    matches!(ext.as_str(), "dxf" | "dwg" | "stl" | "cad3d" | "dwt" | "")
 }
 
 /// Say on the command line what the file couldn't keep, and list it in the result's `notSaved`.

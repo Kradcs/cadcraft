@@ -412,3 +412,7 @@ Forks and modified versions must remove them.
 </p>
 
 Tool Sets, Layers, and Properties can be regrouped, split, floated within the app window, closed, and reopened. The drawing canvas stays visible and cannot be closed or turned into a tab. Drag a panel header to a target edge or another header. Its context menu offers Float panel, Move to group, and Close panel. Existing panel toggles reopen panels at their saved location; Reset Panel Layout restores the app layout. Floating panels remain inside the current app window.
+
+### Experimental measured 3D construction
+
+Named primitives, concave-profile extrusion, full profile revolution and bounded faceted boolean operations are available to the integrated Codex assistant. Editable CAD3D projects retain recipes and source 2D geometry; STL and faceted STEP exports exchange geometry. See [3D modeling scope and limits](docs/modeling-3d.md).

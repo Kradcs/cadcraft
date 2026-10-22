@@ -22,6 +22,12 @@ pub struct State {
     error: Option<String>,
     #[cfg(not(target_arch = "wasm32"))]
     pending: Option<std::sync::mpsc::Receiver<(Key, Result<Frame, String>)>>,
+    pub extrude_dialog: bool,
+    extrude_height: f64,
+    extrude_unit: usize,
+    selected_object: usize,
+    node_revision: u64,
+    node_json: String,
     axis: usize,
     degrees: f64,
     factor: f64,
@@ -42,6 +48,8 @@ impl State {
             self.degrees = 90.0;
             self.axis = 2;
             self.offset = [0.0; 3];
+            self.selected_object = 0;
+            self.node_json.clear();
         }
     }
 }
@@ -91,14 +99,20 @@ pub fn show(app: &mut CadApp, ui: &mut egui::Ui) {
     };
     let mut state = std::mem::take(&mut app.meshview);
     state.open(uid, &mesh);
+    if state.node_revision != revision {
+        state.node_json.clear();
+        state.node_revision = revision;
+    }
     let mut request = None;
     ui.horizontal_wrapped(|ui| {
-        ui.heading(crate::tl!("STL 3D Model"));
+        ui.heading(crate::tl!("3D Modeling"));
         ui.label(&title);
         for (label, id, enabled) in [
             ("Open STL Model...", "ui.mesh.open", true),
             ("Codex Assistant", "ui.agent", true),
-            ("Save STL As...", "ui.saveas", true),
+            ("Save Project As...", "ui.saveas", true),
+            ("Export 3D STL...", "ui.model.export", true),
+            ("Export Faceted STEP...", "ui.model.step", true),
             ("Undo", "undo", undo),
             ("Redo", "redo", redo),
         ] {
@@ -111,7 +125,7 @@ pub fn show(app: &mut CadApp, ui: &mut egui::Ui) {
     let unit_label = if mesh.unit == cadcraft_doc::mesh::Unit::Unknown { crate::tl!("Not specified") } else { mesh.unit.name() };
     ui.label(format!("{}: {}   ·   X {:.3} × Y {:.3} × Z {:.3} {}", crate::tl!("Triangles"), mesh.count(), dims.x, dims.y, dims.z, unit_label));
     ui.horizontal_wrapped(|ui| {
-        ui.label(crate::tl!("Original STL unit"));
+        ui.label(if mesh.model.is_some() { crate::tl!("Project coordinate unit") } else { crate::tl!("Original STL unit") });
         let mut unit = mesh.unit;
         egui::ComboBox::from_id_salt("mesh_unit")
             .selected_text(if unit == cadcraft_doc::mesh::Unit::Unknown { crate::tl!("Not specified") } else { unit.name() })
@@ -123,6 +137,9 @@ pub fn show(app: &mut CadApp, ui: &mut egui::Ui) {
                     cadcraft_doc::mesh::Unit::M,
                     cadcraft_doc::mesh::Unit::Inch,
                 ] {
+                    if mesh.model.is_some() && u == cadcraft_doc::mesh::Unit::Unknown {
+                        continue;
+                    }
                     ui.selectable_value(&mut unit, u, if u == cadcraft_doc::mesh::Unit::Unknown { crate::tl!("Not specified") } else { u.name() });
                 }
             });
@@ -133,6 +150,50 @@ pub fn show(app: &mut CadApp, ui: &mut egui::Ui) {
             ui.small(crate::tl!("STL has no unit. Choose the original unit before physical measurements."));
         }
     });
+    if let Some(recipe) = mesh.model.as_ref() {
+        ui.small(crate::tl!("Curved surfaces are faceted. Check tolerances before fabrication."));
+        egui::CollapsingHeader::new(crate::tl!("Construction objects")).default_open(false).show(ui, |ui| {
+            ui.label(crate::tl!("Edit dimensions by name in Codex, or edit the selected object's JSON fields below."));
+            let names: Vec<_> = recipe.nodes.iter().map(|n| n.name.as_str()).collect();
+            state.selected_object = state.selected_object.min(names.len().saturating_sub(1));
+            let old = state.selected_object;
+            egui::ComboBox::from_id_salt("model_object").selected_text(names.get(state.selected_object).copied().unwrap_or("")).show_ui(ui, |ui| {
+                for (i, name) in names.iter().enumerate() {
+                    ui.selectable_value(&mut state.selected_object, i, *name);
+                }
+            });
+            if old != state.selected_object {
+                state.node_json.clear();
+            }
+            if let Some(node) = recipe.nodes.get(state.selected_object) {
+                if state.node_json.is_empty()
+                    && let Ok(mut v) = serde_json::to_value(node)
+                {
+                    if let Some(m) = v.as_object_mut() {
+                        m.remove("name");
+                        m.remove("kind");
+                    }
+                    state.node_json = serde_json::to_string_pretty(&v).unwrap_or_default();
+                }
+                egui::ScrollArea::vertical().id_salt("node_json").max_height(130.0).show(ui, |ui| {
+                    ui.add(egui::TextEdit::multiline(&mut state.node_json).code_editor().desired_rows(4).desired_width(f32::INFINITY));
+                });
+                if ui.button(crate::tl!("Apply object changes")).clicked() {
+                    match serde_json::from_str::<Value>(&state.node_json) {
+                        Ok(changes) => {
+                            request = Some(("model.edit", json!({"name":node.name,"changes":changes})));
+                            state.node_json.clear();
+                        }
+                        Err(e) => state.error = Some(e.to_string()),
+                    }
+                }
+                if ui.button(crate::tl!("Reload object fields")).clicked() {
+                    state.node_json.clear();
+                }
+            }
+            ui.small(crate::tl!("Objects not consumed by booleans are separate volumes. Unite them for a single part."));
+        });
+    }
     egui::CollapsingHeader::new(crate::tl!("Transform 3D Model")).default_open(true).show(ui, |ui| {
         ui.horizontal_wrapped(|ui| {
             ui.label(crate::tl!("Axis"));
@@ -301,6 +362,33 @@ pub fn show(app: &mut CadApp, ui: &mut egui::Ui) {
     }
 }
 
+/// Modal conversion applies explicit dimensions through the same engine command as the agent.
+pub fn dialogs(app: &mut CadApp, ctx: &egui::Context) {
+    if !app.meshview.extrude_dialog {
+        return;
+    }
+    if app.meshview.extrude_height <= 0.0 {
+        app.meshview.extrude_height = 10.0;
+    }
+    let mut open = true;
+    let mut convert = false;
+    egui::Window::new(crate::tl!("Extrude Selected 2D...")).open(&mut open).collapsible(false).show(ctx, |ui| {
+        ui.label(crate::tl!("Select closed circles or polylines in the XY plane first. Enter height and the drawing's unit."));
+        ui.add(egui::DragValue::new(&mut app.meshview.extrude_height).prefix(crate::tl!("Height:")).range(1e-5..=1e7));
+        for (i, label) in ["mm", "cm", "m", "in"].iter().enumerate() {
+            ui.radio_value(&mut app.meshview.extrude_unit, i, *label);
+        }
+        convert = ui.button(crate::tl!("Create extrusion")).clicked();
+    });
+    app.meshview.extrude_dialog = open;
+    if convert {
+        let unit = ["mm", "cm", "m", "in"].get(app.meshview.extrude_unit).copied().unwrap_or("mm");
+        if app.run("model.from2d", json!({"height":app.meshview.extrude_height,"unit":unit})).is_ok() {
+            app.meshview.extrude_dialog = false;
+        }
+    }
+}
+
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
@@ -331,7 +419,7 @@ mod tests {
         );
         h.run_steps(4);
         assert_eq!(h.state().meshview.camera.unwrap().yaw, -90.0);
-        assert!(h.query_by_label("STL 3D Model").is_some());
+        assert!(h.query_by_label("3D Modeling").is_some());
         let size = h.state().session.doc().unwrap().mesh.as_ref().unwrap().size();
         h.state_mut().meshview.factor = 2.0;
         h.get_by_label("Scale model").click();
@@ -404,10 +492,64 @@ mod tests {
         assert!(h.state().session.doc().unwrap().mesh.as_ref().unwrap().center().x.abs() < 1e-8);
         h.state_mut().run("new", json!({})).unwrap();
         h.run_steps(3);
-        assert!(h.query_by_label("STL 3D Model").is_none());
+        assert!(h.query_by_label("3D Modeling").is_none());
         h.state_mut().run("document.switch", json!({"index":0})).unwrap();
         h.run_steps(3);
-        assert!(h.query_by_label("STL 3D Model").is_some());
+        assert!(h.query_by_label("3D Modeling").is_some());
+    }
+    #[test]
+    fn model_ui_creates_edits_object_and_converts_selection() {
+        let mut a = CadApp::new(cadcraft_engine::Session::new(), crate::Services::default());
+        a.run("circle", json!({"center":[0,0],"radius":10})).unwrap();
+        let original = a.session.state().unwrap().uid;
+        let h = a.session.doc().unwrap().model.iter().next().unwrap().handle;
+        a.session.set_selection(vec![h]);
+        a.run("ui.model.extrude", Value::Null).unwrap();
+        let mut h = Harness::builder().with_size(egui::vec2(1500., 950.)).build_ui_state(
+            |ui, a: &mut CadApp| {
+                a.logic(&ui.ctx().clone());
+                a.ui(ui);
+            },
+            a,
+        );
+        h.run_steps(3);
+        h.get_by_label("Create extrusion").click();
+        h.run_steps(3);
+        assert!(h.state().session.doc().unwrap().mesh.is_some());
+        assert_eq!(h.state().session.doc().unwrap().entity_count(), 1);
+        h.state_mut().run("ui.model.new", Value::Null).unwrap();
+        h.run_steps(3);
+        assert_ne!(h.state().session.state().unwrap().uid, original);
+        assert_eq!(h.state().session.docs.len(), 2);
+        h.get_by_label("Construction objects").click();
+        h.run_steps(3);
+        h.state_mut().meshview.node_json = serde_json::to_string(&json!({"size":[110,70,14]})).unwrap();
+        h.run_steps(2);
+        h.get_by_label("Apply object changes").click();
+        h.run_steps(3);
+        assert_eq!(h.state().session.doc().unwrap().mesh.as_ref().unwrap().size().z, 14.);
+        h.state_mut().run("undo", json!({})).unwrap();
+        h.run_steps(2);
+        assert_eq!(h.state().session.doc().unwrap().mesh.as_ref().unwrap().size().z, 10.);
+    }
+    #[test]
+    fn model_agent_builds_edits_verifies_and_keeps_document_guard() {
+        let mut a = CadApp::new(cadcraft_engine::Session::new(), crate::Services::default());
+        let target = a.session.state().unwrap().uid;
+        let run = |a: &mut CadApp, command: &str, params: Value| {
+            crate::agent::execute(a, target, "cadcraft_execute", &json!({"command":command,"params":params}))
+        };
+        run(&mut a,"model.build",json!({"version":1,"unit":"mm","nodes":[{"name":"base","kind":"box","size":[100,60,10]},{"name":"hole","kind":"cylinder","radius":5,"height":12,"position":[50,30,-1],"segments":24},{"name":"piece","kind":"boolean","operation":"subtract","a":"base","b":"hole"}]})).unwrap();
+        assert!(!a.ui.start_tab);
+        run(&mut a, "model.edit", json!({"name":"base","changes":{"size":[120,60,10]}})).unwrap();
+        run(&mut a, "ui.mesh.view", json!({"view":"fit"})).unwrap();
+        let report = crate::agent::execute(&mut a, target, "cadcraft_inspect", &json!({})).unwrap();
+        assert_eq!(report["recipe"]["nodes"][0]["size"][0], 120.);
+        assert_eq!(report["size"]["x"], 120.);
+        a.run("undo", json!({})).unwrap();
+        assert_eq!(a.session.doc().unwrap().mesh.as_ref().unwrap().size().x, 100.);
+        a.run("new", json!({})).unwrap();
+        assert!(run(&mut a, "model.edit", json!({"name":"base","changes":{"size":[1,2,3]}})).is_err());
     }
     #[test]
     fn agent_inspects_transforms_verifies_and_undoes_meshes_and_refuses_wrong_document() {
@@ -457,6 +599,11 @@ mod tests {
             }
             a.session.doc_mut().unwrap().mesh = Some(Arc::new(Mesh::new(triangles).unwrap()));
             a.session.state_mut().unwrap().title = "Model.stl".into();
+        }
+        if let Some(path) = std::env::var_os("CADCRAFT_MODEL_PREVIEW_RECIPE") {
+            let recipe: cadcraft_doc::model::Model = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+            a.session.doc_mut().unwrap().mesh = Some(Arc::new(recipe.build().unwrap()));
+            a.session.state_mut().unwrap().title = "Projeto 3D".into();
         }
         a.ui.interface_language = crate::i18n::Preference::BrazilianPortuguese;
         a.agent.open = true;

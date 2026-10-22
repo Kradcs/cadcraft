@@ -1,6 +1,6 @@
 # Geometry parity
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-21 · **Change:** minor (standalone STL workspace; scores unchanged) · **Target:** Autodesk AutoCAD 2027
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-22 · **Change:** minor (faceted measured 3D construction; scores unchanged) · **Target:** Autodesk AutoCAD 2027
 
 CAD users trust numbers: a trimmed endpoint, an offset, an intersection or an area is either right
 to the last displayed digit or the tool is unusable for production drawings. This document
@@ -52,7 +52,7 @@ constraints 10%.
 | Spline editing: knot insertion, split, refine, rebuild, convert to polyline | SPLINEDIT, grips | knot insertion and splitting (`curves.rs:539-622`); refine/rebuild partial |
 | Helix | yes | **no** |
 | 3D polyline | yes | stored and drawn; no 3D operations |
-| Regions, 3D solids, surfaces, meshes (ACIS/B-rep, NURBS surfaces, subdivision) | yes | No B-rep/solid modeller (M11); experimental standalone STL mesh viewing, transforms and export, with Undo/Redo ([scope](stl-models.md)) |
+| Regions, 3D solids, surfaces, meshes (ACIS/B-rep, NURBS surfaces, subdivision) | yes | No analytic B-rep kernel (M11); experimental named faceted construction, extrusion/revolution, bounded boolean operations and STEP export ([scope](modeling-3d.md)); standalone STL transforms remain available |
 
 ## Intersections (≈ 40%)
 
@@ -166,3 +166,5 @@ Total ≈ 90–140 h; items 1–6 parallelise across two or three agents.
 | 2026-10-11 | minor | FILLET with elliptical arcs and splines; trim/extend section 55% → 65% (#466) |
 | 2026-10-11 | minor | FILLET/CHAMFER with polyline segments (same polyline, end segment with a line); section 65% → 70% (#466) |
 | 2026-10-11 | minor | Constraint solver (#546): DOF report, G2 Smooth, ellipse/spline/block geometry, CONSTRAINTINFER |
+
+| 2026-10-22 | minor | Experimental measured faceted construction, named editable CAD3D recipes, 2D extrusion, revolution, bounded boolean operations and faceted STEP export; see `modeling-3d.md`. No analytic solid kernel or parity score change. |
