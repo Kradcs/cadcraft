@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   package:
-    runs-on: windows-latest
+    runs-on: windows-2022
     timeout-minutes: 60
     env:
       CARGO_BUILD_JOBS: '2'
