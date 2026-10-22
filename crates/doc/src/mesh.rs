@@ -172,3 +172,10 @@ pub fn translation(p: Vec3) -> Mat4 {
     t.m[2][3] = p.z;
     t
 }
+
+/// STL normals must be scale independent, including facets smaller than the 2D drafting EPS.
+pub fn triangle_normal([a, b, c]: [Vec3; 3]) -> Vec3 {
+    let n = (b - a).cross(c - a);
+    let length = n.len();
+    if length > 0.0 && length.is_finite() { Vec3::new(n.x / length, n.y / length, n.z / length) } else { Vec3::ZERO }
+}

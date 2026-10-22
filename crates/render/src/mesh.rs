@@ -79,8 +79,7 @@ pub fn render(mesh: &Mesh, camera: Camera, width: u32, height: u32) -> Result<Fr
         if work > 48_000_000 {
             return Err("3D view too expensive to render. Use Fit model or zoom out.".into());
         }
-        let [p, q, r] = t;
-        let normal = (q - p).cross(r - p).normalized();
+        let normal = cadcraft_doc::mesh::triangle_normal(t);
         let shade = 0.30 + 0.70 * normal.dot(light).abs();
         let color = [(230.0 * shade) as u8, (190.0 * shade) as u8, (71.0 * shade) as u8, 255];
         for y in y0..y1 {
@@ -135,6 +134,24 @@ mod tests {
         camera.zoom = f64::NAN;
         assert!(render(&a, camera, 320, 240).is_err());
     }
+    #[test]
+    fn lighting_is_invariant_under_unit_scale_changes() {
+        let triangles = vec![[Vec3::new(-1.0, 0.0, -1.0), Vec3::new(1.0, 0.0, -1.0), Vec3::new(0.0, 0.0, 1.0)]];
+        let large = Mesh::new(triangles).unwrap();
+        let mut small = large.clone();
+        small.scaled(0.000001).unwrap();
+        let mut a = Camera::fit(&large);
+        a.yaw = -90.0;
+        a.pitch = 0.0;
+        let mut b = Camera::fit(&small);
+        b.yaw = -90.0;
+        b.pitch = 0.0;
+        let first = render(&large, a, 320, 240).unwrap();
+        let second = render(&small, b, 320, 240).unwrap();
+        let index = (120 * 320 + 160) * 4;
+        assert_eq!(&first.rgba[index..index + 4], &second.rgba[index..index + 4]);
+    }
+
     #[test]
     fn supplied_model_render_when_requested() {
         // The user's file is deliberately not a repository fixture or a release asset.

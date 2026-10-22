@@ -125,7 +125,7 @@ pub fn write(d: &Drawing) -> Result<Vec<u8>, String> {
     bytes.reserve(mesh.count().saturating_mul(50));
     for t in mesh.triangles() {
         let [a, b, c] = t;
-        let normal = (b - a).cross(c - a).normalized();
+        let normal = cadcraft_doc::mesh::triangle_normal(t);
         for v in [normal, a, b, c] {
             for n in [v.x, v.y, v.z] {
                 if !n.is_finite() || n.abs() > f64::from(f32::MAX) {
@@ -189,6 +189,15 @@ mod tests {
         solid[..5].copy_from_slice(b"solid");
         assert_eq!(read(&solid).unwrap().mesh.as_ref().unwrap().count(), 1);
     }
+    #[test]
+    fn exported_normals_are_unit_vectors_even_after_large_scale_reductions() {
+        let mut d = read(&ascii()).unwrap();
+        Arc::make_mut(d.mesh.as_mut().unwrap()).scaled(0.000001).unwrap();
+        let bytes = write(&d).unwrap();
+        let normal: Vec<_> = bytes[84..96].chunks_exact(4).map(|b| f64::from(f32::from_le_bytes(b.try_into().unwrap()))).collect();
+        assert!((normal.iter().map(|v| v * v).sum::<f64>() - 1.0).abs() < 1e-6);
+    }
+
     #[test]
     fn supplied_stl_is_read_transformed_exported_and_reread_when_requested() {
         let Some(path) = std::env::var_os("CADCRAFT_TEST_STL") else { return };
