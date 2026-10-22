@@ -1,0 +1,43 @@
+name: Windows v7 test diagnostics
+on:
+  push:
+    branches: [codex/windows-v7-diagnostics]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Report failed native Windows test details
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PYTHON'
+          import urllib.request, urllib.error, os, re
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+          url = 'https://api.github.com/repos/Kradcs/cadcraft/actions/jobs/120088162102/logs'
+          req = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN']})
+          try:
+              response = urllib.request.build_opener(NoRedirect).open(req, timeout=30)
+          except urllib.error.HTTPError as error:
+              if error.code != 302:
+                  raise
+              response = urllib.request.urlopen(error.headers['Location'], timeout=60)
+          with response:
+              lines = response.read().decode('utf-8', errors='replace').splitlines()
+          selected = set()
+          for index, line in enumerate(lines):
+              if re.search(r'FAILED|panicked|error\[|error:|failures:|Caused by:|left:|right:', line):
+                  selected.update(range(max(0, index-1), min(len(lines), index+12)))
+          detail = '\n'.join(lines[index] for index in sorted(selected))[-35000:]
+          if not detail:
+              detail = '\n'.join(lines[-80:])[-18000:]
+          escaped = detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          print('::warning title=Native Windows test diagnostics::' + escaped)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('Native Windows test failure details\n\n```text\n' + detail + '\n```\n')
+          PYTHON
