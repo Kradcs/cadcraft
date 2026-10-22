@@ -22,6 +22,7 @@ mod inquiry;
 mod layer;
 mod layout;
 mod lisp;
+pub(crate) mod mesh;
 mod mleader_content;
 mod mleader_edit;
 mod modify;
@@ -126,7 +127,11 @@ impl CommandSpec {
         self
     }
     pub fn info(&self, s: &Session) -> CommandInfo {
-        let e = (self.enabled)(s);
+        let e = if s.doc().is_ok_and(|d| d.mesh.is_some()) && !mesh::allowed(self.id) {
+            Err("This is a 3D mesh document; use mesh commands".into())
+        } else {
+            (self.enabled)(s)
+        };
         CommandInfo {
             id: self.id,
             label: self.label,
@@ -172,6 +177,7 @@ pub fn command_specs() -> &'static [CommandSpec] {
     SPECS.get_or_init(|| {
         let mut v = Vec::new();
         v.extend(file::specs());
+        v.extend(mesh::specs());
         v.extend(file::alias_specs());
         v.extend(audit::specs());
         v.extend(edit::specs());

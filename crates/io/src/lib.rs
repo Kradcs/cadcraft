@@ -14,6 +14,7 @@ mod dxf_write;
 mod dxf_xref;
 pub mod pdf;
 pub mod plotter;
+pub mod stl;
 pub mod svg;
 mod svg_read;
 
@@ -60,6 +61,9 @@ fn ext(name: &str) -> String {
 /// Read a drawing; the format comes from the content (DXF ASCII/binary, DWG) or the name
 /// (SVG and gzip-compressed SVGZ).
 pub fn read(bytes: &[u8], name: &str) -> Result<Drawing> {
+    if ext(name) == "stl" || stl::is_ours(bytes) {
+        return stl::read(bytes).map_err(IoError::Format);
+    }
     if cadcraft_dwg::is_dwg(bytes) {
         let (dxf, notes) = cadcraft_dwg::dwg_to_dxf_noted(bytes, cadcraft_dwg::Limits::DEFAULT).map_err(IoError::Format)?;
         let mut d = dxf_read::read(&dxf).map_err(|e| IoError::Format(format!("{e} (in the DXF converted from this DWG)")))?;
@@ -84,6 +88,13 @@ pub fn write(d: &Drawing, name: &str) -> Result<Vec<u8>> {
 /// Like [`write`], with the DXF/DWG version and binary DXF chosen by `opts`. Binary applies to
 /// DXF only; asking for it with another format is an error.
 pub fn write_with(d: &Drawing, name: &str, opts: &SaveOptions) -> Result<Vec<u8>> {
+    if d.mesh.is_some() {
+        return if ext(name) == "stl" {
+            stl::write(d).map_err(IoError::Format)
+        } else {
+            Err(IoError::Format("Save this mesh as STL; converting it to a 2D drawing would lose the model".into()))
+        };
+    }
     let version = opts.version.unwrap_or_else(|| save_version(d));
     match ext(name).as_str() {
         "dxf" | "" => {
@@ -112,6 +123,9 @@ pub fn write_with(d: &Drawing, name: &str, opts: &SaveOptions) -> Result<Vec<u8>
 /// [`check_window`].
 pub fn write_framed(d: &Drawing, name: &str, window: Option<Bounds2>) -> Result<Vec<u8>> {
     // A drawing template (.dwt) is DWG content.
+    if d.mesh.is_some() {
+        return write_with(d, name, &SaveOptions::default());
+    }
     if ext(name) == "dwt" {
         return write_framed(d, &format!("{name}.dwg"), None);
     }

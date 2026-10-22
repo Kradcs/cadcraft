@@ -13,6 +13,7 @@ mod extents;
 mod gdt;
 mod header;
 pub mod library;
+pub mod mesh;
 mod plotstyle;
 mod plotter;
 mod refedit;
@@ -84,6 +85,8 @@ impl Space {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Drawing {
+    /// Standalone STL mesh (2D geometry commands are disabled in mesh documents).
+    pub mesh: Option<std::sync::Arc<mesh::Mesh>>,
     pub header: Header,
     /// File data CADCraft does not model, written back on save.
     pub foreign: std::sync::Arc<foreign::Foreign>,
@@ -155,6 +158,7 @@ impl Drawing {
     }
     fn bare() -> Self {
         Drawing {
+            mesh: None,
             header: Header::default(),
             foreign: std::sync::Arc::default(),
             layers: vec![Layer::default(), Layer { name: "Defpoints".into(), plot: false, ..Layer::default() }],

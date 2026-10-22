@@ -44,6 +44,14 @@ its own authentication. The Codex executable uses the current user's Codex
 configuration. Requests and drawing inspection results are sent to the configured
 Codex model provider. Do not share drawings with that provider unless authorized.
 
+## STL 3D models
+
+Windows portable v5 can open standalone STL meshes in a dedicated 3D workspace.
+Use **File → Open STL Model…** or drag an STL onto CADCraft. Codex can inspect and
+transform the open model, set/convert units and choose camera views. See
+[STL 3D workspace](stl-models.md) for controls, examples and limits. STL documents
+are opened locally, separately from conversation reference attachments.
+
 ## Attach reference files
 
 Choose **Attach files** (**Anexar arquivos**) in the Codex panel, or drop files

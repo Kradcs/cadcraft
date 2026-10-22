@@ -201,7 +201,9 @@ The logger is `apps/cadcraft/src/logging.rs`; the web build logs to the browser 
 ## Drive it from agents, MCP and the CLI
 
 The desktop app also has an integrated **Window → Codex Assistant** conversation
-panel with PDF, PNG, JPG/JPEG and TXT reference attachments. Connect the Codex CLI with your ChatGPT account and ask it to act on the open
+panel with PDF, PNG, JPG/JPEG and TXT reference attachments. The experimental
+[STL workspace](docs/stl-models.md) opens 3D triangle meshes for viewing, whole-model
+transforms, Undo/Redo and STL export, including agent commands. Connect the Codex CLI with your ChatGPT account and ask it to act on the open
 drawing. See [setup, supported actions and limitations](docs/codex-assistant.md).
 
 ```sh

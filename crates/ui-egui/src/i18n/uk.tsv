@@ -1365,3 +1365,34 @@
 	Remove attachment	Вилучити вкладення
 	PDF, PNG, JPG, TXT · drop files here · up to 6 files	PDF, PNG, JPG, TXT · перетягніть сюди · до 6 файлів
 	Attachments are sent to Codex when you choose Send.	Вкладення надсилаються до Codex після натискання «Надіслати».
+	STL 3D Model	3D-модель STL
+	Open STL Model...	Відкрити модель STL...
+	3D Model View	Вигляд 3D-моделі
+	Save STL As...	Зберегти STL як...
+	Triangles	Трикутники
+	Original STL unit	Початкова одиниця STL
+	STL has no unit. Choose the original unit before physical measurements.	STL не містить одиниць. Задайте початкову одиницю перед фізичними вимірами.
+	Transform 3D Model	Перетворення 3D-моделі
+	Axis	Вісь
+	Rotate model	Повернути модель
+	Target size	Потрібний розмір
+	Resize proportionally	Змінити розмір пропорційно
+	Scale factor	Коефіцієнт масштабу
+	Scale model	Масштабувати модель
+	Move model	Перемістити модель
+	Center on ground	Центрувати на основі
+	Fit model	Вписати модель
+	Front	Спереду
+	Back	Ззаду
+	Top	Зверху
+	Isometric	Ізометрія
+	Drag to orbit · right-drag to pan · wheel to zoom	Тягніть для обертання · права кнопка для панорамування · колесо для масштабу
+	Preparing 3D view…	Підготовка 3D-вигляду…
+	Inspect 3D Model	Перевірити 3D-модель
+	Move 3D Model	Перемістити 3D-модель
+	Rotate 3D Model	Повернути 3D-модель
+	Scale 3D Model	Масштабувати 3D-модель
+	Resize 3D Model	Змінити розмір 3D-моделі
+	Center 3D Model	Центрувати 3D-модель
+	3D Model Units	Одиниці 3D-моделі
+	Not specified	Не задано

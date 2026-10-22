@@ -886,6 +886,9 @@ impl Session {
     /// Run a command with JSON parameters (no dialogs). Records undo when the drawing changes.
     pub fn execute(&mut self, id: &str, params: &Value) -> Result<Value> {
         let spec = find_command(id).ok_or_else(|| EngineError::UnknownCommand(id.to_string()))?;
+        if self.doc().is_ok_and(|d| d.mesh.is_some()) && !cmd::mesh::allowed(spec.id) {
+            return Err(EngineError::Disabled(spec.id.into(), "Use mesh commands in an STL document".into()));
+        }
         (spec.enabled)(self).map_err(|m| EngineError::Disabled(spec.id.into(), m))?;
         if let Some(why) = cmd::blocks::bedit::refused_in_editor(self, spec.id) {
             return Err(EngineError::Disabled(spec.id.into(), why));
@@ -996,6 +999,9 @@ impl Session {
         }
         if !nested && self.running.is_some() {
             self.cancel();
+        }
+        if self.doc().is_ok_and(|d| d.mesh.is_some()) && !cmd::mesh::allowed(spec.id) {
+            return Err(EngineError::Disabled(spec.id.into(), "Use mesh commands in an STL document".into()));
         }
         (spec.enabled)(self).map_err(|m| EngineError::Disabled(spec.id.into(), m))?;
         if let Some(why) = cmd::blocks::bedit::refused_in_editor(self, spec.id) {

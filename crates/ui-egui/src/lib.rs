@@ -24,6 +24,7 @@ pub mod credits;
 pub mod dialogs;
 pub mod docking;
 pub mod hatchdlg;
+pub mod meshview;
 mod mtext_editor;
 pub mod spacemouse;
 // The External References palette.
@@ -195,6 +196,7 @@ pub struct Services {
 
 pub struct CadApp {
     pub agent: agent::State,
+    pub meshview: meshview::State,
     pub system_languages: Vec<String>,
     /// Whether the operating system shows animations, as the host reads it; `None` when the OS
     /// states nothing or the host cannot ask ([`animation`]).
@@ -257,6 +259,7 @@ impl CadApp {
     pub fn new(session: Session, services: Services) -> Self {
         CadApp {
             agent: agent::State::default(),
+            meshview: meshview::State::default(),
             system_languages: Vec::new(),
             system_animations: None,
             session,
@@ -653,7 +656,9 @@ impl CadApp {
         }
         agent::show(self, ui);
         egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.canvas)).show(ui, |ui| {
-            if has_doc {
+            if self.session.doc().is_ok_and(|d| d.mesh.is_some()) && !self.ui.start_tab {
+                meshview::show(self, ui);
+            } else if has_doc {
                 docking::show(self, ui);
             } else {
                 chrome::start_page(self, ui);

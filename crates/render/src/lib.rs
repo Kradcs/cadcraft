@@ -13,6 +13,7 @@ mod fill;
 mod hatch;
 mod linetype;
 mod linetype_text;
+pub mod mesh;
 mod mline;
 mod outline;
 pub mod paper;

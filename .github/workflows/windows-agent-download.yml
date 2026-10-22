@@ -1,11 +1,11 @@
 name: Windows Codex portable download
 on:
   push:
-    branches: [codex/windows-agent-attachments-v4]
+    branches: [codex/windows-stl-models-v5]
 permissions:
   contents: write
 concurrency:
-  group: windows-codex-portable-v4
+  group: windows-codex-portable-v5
   cancel-in-progress: false
 jobs:
   package:
@@ -24,10 +24,20 @@ jobs:
         run: |
           rustup toolchain install 1.95.0 --profile minimal --target x86_64-pc-windows-msvc
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: windows-portable-rust195
       - name: Build Windows executables
         shell: pwsh
         run: |
           cargo +1.95.0 build --locked --release --target x86_64-pc-windows-msvc -p cadcraft -p cadcraft-cli
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Test STL parsing, mesh edits, rendering and UI on Windows
+        shell: pwsh
+        run: |
+          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-io --lib stl::
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cargo +1.95.0 test --locked --release --target x86_64-pc-windows-msvc -p cadcraft-engine -p cadcraft-render -p cadcraft-ui-egui --lib mesh
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Test attachments and the Codex panel on Windows
         shell: pwsh
@@ -44,6 +54,46 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           $drawing = (& $cli info "$env:RUNNER_TEMP/smoke.dxf" | ConvertFrom-Json)
           if ($LASTEXITCODE -or $drawing.entityCount -ne 1 -or $drawing.counts.Circle -ne 1) { throw 'Native drawing smoke test failed' }
+      - name: Check native STL import, transform, save and reopen
+        shell: pwsh
+        run: |
+          @'
+          solid tetrahedron
+          facet normal 0 0 0
+          outer loop
+          vertex 0 0 0
+          vertex 20 0 0
+          vertex 0 10 0
+          endloop
+          endfacet
+          facet normal 0 0 0
+          outer loop
+          vertex 0 0 0
+          vertex 0 0 30
+          vertex 20 0 0
+          endloop
+          endfacet
+          facet normal 0 0 0
+          outer loop
+          vertex 0 0 0
+          vertex 0 10 0
+          vertex 0 0 30
+          endloop
+          endfacet
+          facet normal 0 0 0
+          outer loop
+          vertex 20 0 0
+          vertex 0 0 30
+          vertex 0 10 0
+          endloop
+          endfacet
+          endsolid tetrahedron
+          '@ | Set-Content -LiteralPath "$env:RUNNER_TEMP/model.stl" -Encoding utf8
+          $cli = "$pwd/target/x86_64-pc-windows-msvc/release/cadcraft-cli.exe"
+          & $cli run "$env:RUNNER_TEMP/model.stl" --cmd 'mesh.units {"unit":"mm"}' --cmd 'mesh.resize {"axis":"z","size":100}' --cmd 'mesh.rotate {"axis":"z","degrees":90}' --cmd 'mesh.center {"ground":true}' --save "$env:RUNNER_TEMP/result.stl"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $model = (& $cli info "$env:RUNNER_TEMP/result.stl" | ConvertFrom-Json)
+          if ($LASTEXITCODE -or $model.type -ne 'stlMesh' -or $model.triangles -ne 4 -or $model.unit -ne 'mm' -or [Math]::Abs($model.size.z - 100) -gt 0.001 -or [Math]::Abs($model.bounds.min.z) -gt 0.001) { throw 'Native STL smoke test failed' }
       - name: Install official Codex and create portable package
         shell: pwsh
         run: |
@@ -62,15 +112,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           @'
-          Experimental Windows x64 CADCraft build with an integrated Codex conversation panel and PDF, PNG, JPG/JPEG and TXT attachments.
+          Experimental Windows x64 CADCraft build with a standalone STL 3D workspace, Codex mesh tools and PDF/PNG/JPG/TXT reference attachments.
 
-          Download CADCraft-Windows-portatil-v4.zip, extract it into a new directory and run ABRIR-CADCRAFT.cmd. Codex 0.163.0 is included. No Rust, Node.js or Visual Studio installation is needed on the destination PC.
+          Download CADCraft-Windows-portatil-v5.zip, extract it into a new directory and run ABRIR-CADCRAFT.cmd. Codex 0.163.0 is included. No Rust, Node.js or Visual Studio installation is needed on the destination PC.
 
-          Open Window > Codex Assistant (Janela > Assistente Codex), connect and complete ChatGPT sign-in in your browser. Choose Attach files (Anexar arquivos), or drop files while the panel is open, enter a request and choose Send (Enviar). PDF pages are rendered as visual references, including scanned pages. Limits: 6 files, 20 MiB per file, 40 MiB source total, 12 pages per PDF and 16 visual pages/images per message. Other limits are explained in docs/codex-assistant.md.
+          Open File > Open STL Model (Arquivo > Abrir modelo STL), or drag an STL onto the app. Orbit with left-drag, pan with right-drag, and zoom with the wheel. Use the controls to move, rotate, resize, center and export the mesh. Undo/Redo and unsaved-change handling are included. Choose the original STL unit explicitly before physical-size requests.
 
-          Attachment decoding, protocol packets, file selection/removal, error handling and drawing tools were tested on the native Windows runner, along with the CLI drawing smoke test. Interactive desktop operation and a signed-in model request still require user validation.
+          Open Window > Codex Assistant (Janela > Assistente Codex), connect and sign in with ChatGPT if needed. Start a new conversation after switching documents. The agent can inspect and transform the model and choose camera views. Saving stays under your control. This version edits the whole mesh; it does not sculpt details, generate characters, repair meshes or import OBJ/STEP/IGES. See docs/stl-models.md for scope and limits.
+
+          Existing PDF/PNG/JPG/TXT reference attachments remain available in the conversation panel. STL files open locally in their own model tabs, rather than being sent as conversation attachments. No user-supplied models are bundled.
+
+          STL parsing, round trips, unit conversions, geometry edits, Undo/Redo, depth ordering, UI controls and agent tools were tested on the native Windows runner. Native CLI smoke tests also verify STL import/transform/save/reopen and the existing 2D DXF/PNG workflow. Interactive desktop operation and a signed-in model request still require user validation.
 
           This is an experimental development build, not an official project release. SHA-256 checksum and licenses are included.
           '@ | Set-Content -LiteralPath "$env:RUNNER_TEMP/release-notes.md" -Encoding utf8
-          gh release create cadcraft-codex-windows-v4 ./dist/agent-portable/CADCraft-Windows-portatil-v4.zip ./dist/agent-portable/CADCraft-Windows-portatil-v4.zip.sha256 --repo '${{ github.repository }}' --target '${{ github.sha }}' --prerelease --title 'CADCraft com Codex - Windows x64 (anexos v4)' --notes-file "$env:RUNNER_TEMP/release-notes.md"
+          gh release create cadcraft-codex-windows-v5 ./dist/agent-portable/CADCraft-Windows-portatil-v5.zip ./dist/agent-portable/CADCraft-Windows-portatil-v5.zip.sha256 --repo '${{ github.repository }}' --target '${{ github.sha }}' --prerelease --title 'CADCraft com Codex - Windows x64 (STL 3D v5)' --notes-file "$env:RUNNER_TEMP/release-notes.md"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

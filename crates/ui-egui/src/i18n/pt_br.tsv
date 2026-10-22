@@ -1273,3 +1273,34 @@
 	Remove attachment	Remover anexo
 	PDF, PNG, JPG, TXT · drop files here · up to 6 files	PDF, PNG, JPG, TXT · arraste aqui · até 6 arquivos
 	Attachments are sent to Codex when you choose Send.	Os anexos são enviados ao Codex ao clicar em Enviar.
+	STL 3D Model	Modelo 3D STL
+	Open STL Model...	Abrir modelo STL...
+	3D Model View	Vista do modelo 3D
+	Save STL As...	Salvar STL como...
+	Triangles	Triângulos
+	Original STL unit	Unidade original do STL
+	STL has no unit. Choose the original unit before physical measurements.	O STL não informa unidades. Defina a unidade original antes de medidas físicas.
+	Transform 3D Model	Transformar modelo 3D
+	Axis	Eixo
+	Rotate model	Girar modelo
+	Target size	Tamanho desejado
+	Resize proportionally	Redimensionar proporcionalmente
+	Scale factor	Fator de escala
+	Scale model	Escalar modelo
+	Move model	Mover modelo
+	Center on ground	Centralizar no chão
+	Fit model	Enquadrar modelo
+	Front	Frente
+	Back	Trás
+	Top	Superior
+	Isometric	Isométrica
+	Drag to orbit · right-drag to pan · wheel to zoom	Arraste para girar · botão direito para mover a vista · roda para zoom
+	Preparing 3D view…	Preparando vista 3D…
+	Inspect 3D Model	Inspecionar modelo 3D
+	Move 3D Model	Mover modelo 3D
+	Rotate 3D Model	Girar modelo 3D
+	Scale 3D Model	Escalar modelo 3D
+	Resize 3D Model	Redimensionar modelo 3D
+	Center 3D Model	Centralizar modelo 3D
+	3D Model Units	Unidades do modelo 3D
+	Not specified	Não definida

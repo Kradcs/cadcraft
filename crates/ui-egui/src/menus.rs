@@ -15,6 +15,8 @@ const RECENT_CLEAR: &str = "ui.recent.clear";
 
 /// UI-only commands: (id, label, menu path, shortcut).
 pub const UI_COMMANDS: &[(&str, &str, &[&str], Option<&str>)] = &[
+    ("ui.mesh.open", "Open STL Model...", &["File", "Open STL Model..."], None),
+    ("ui.mesh.view", "3D Model View", &[], None),
     ("ui.agent", "Codex Assistant", &["Window", "Codex Assistant"], None),
     ("ui.spacemouse", "3D Mouse...", &["Tools", "3D Mouse..."], None),
     ("ui.spacemouse.calibrate", "Calibrate 3D Mouse", &[], None),
@@ -146,6 +148,15 @@ fn run_ui_command_inner(app: &mut CadApp, id: &str, params: &Value) -> Option<Re
             }
             Ok(json!({"interfaceLanguage": preference.code(), "shown": shown}))
         }
+        "ui.mesh.view" => return Some(crate::meshview::command(app, params)),
+        "ui.mesh.open" => {
+            if let Some(path) =
+                params.get("path").and_then(Value::as_str).map(str::to_owned).or_else(|| app.services.pick_open.as_ref().and_then(|f| f()))
+            {
+                app.open_path(&path);
+            }
+            Ok(Value::Null)
+        }
         "ui.open" | "open" if no_path => {
             let picked = app.services.pick_open.as_ref().and_then(|f| f());
             if let Some(p) = picked {
@@ -171,7 +182,12 @@ fn run_ui_command_inner(app: &mut CadApp, id: &str, params: &Value) -> Option<Re
         }
         "ui.saveas" | "saveas" if no_path => {
             let title = app.session.state().map(|s| s.title.clone()).ok();
-            let name = app.ui.save_format.suggested_name(title.as_deref());
+            let name = if app.session.doc().is_ok_and(|d| d.mesh.is_some()) {
+                let stem = title.as_deref().and_then(|t| std::path::Path::new(t).file_stem()).and_then(|s| s.to_str()).unwrap_or("Model");
+                format!("{stem}.stl")
+            } else {
+                app.ui.save_format.suggested_name(title.as_deref())
+            };
             if let Some(p) = app.services.pick_save.as_ref().and_then(|f| f(&name)) {
                 return Some(app.session.execute("saveas", &saveas_params(&app.ui, &app.session, &p)).map_err(|e| e.to_string()));
             }

@@ -260,12 +260,28 @@ pub struct ReadFile {
     path: Option<String>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+fn read_path(path: &str) -> std::result::Result<Vec<u8>, String> {
+    use std::io::Read;
+    if std::path::Path::new(path).extension().is_some_and(|e| e.eq_ignore_ascii_case("stl")) {
+        let file = std::fs::File::open(path).map_err(|e| format!("{path}: {e}"))?;
+        let mut bytes = Vec::new();
+        file.take(64 * 1024 * 1024 + 1).read_to_end(&mut bytes).map_err(|e| format!("{path}: {e}"))?;
+        if bytes.len() > 64 * 1024 * 1024 {
+            return Err("STL exceeds 64 MiB".into());
+        }
+        Ok(bytes)
+    } else {
+        std::fs::read(path).map_err(|e| format!("{path}: {e}"))
+    }
+}
+
 /// Read and decode `path` (the slow half of `OPEN {path}`). Needs no session; runs anywhere.
 pub fn read_file(path: &str) -> std::result::Result<ReadFile, String> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let r = std::panic::catch_unwind(|| {
-            let bytes = std::fs::read(path).map_err(|e| bad("open", format!("{path}: {e}")))?;
+            let bytes = read_path(path).map_err(|e| bad("open", e))?;
             read_bytes(&bytes, path, Some(path.to_string()))
         });
         match r {
@@ -332,7 +348,7 @@ fn run_open(s: &mut Session, p: &Value) -> Result<Value> {
         let path = _path;
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let bytes = std::fs::read(path).map_err(|e| bad("open", format!("{path}: {e}")))?;
+            let bytes = read_path(path).map_err(|e| bad("open", e))?;
             let i = open_bytes(s, &bytes, path, Some(path.to_string()))?;
             super::blocks::xref::after_open(s, i);
             return Ok(opened(s, i, true));
@@ -547,7 +563,7 @@ pub fn drops_unknown(path: &str) -> bool {
 /// Whether `path` is saved as a drawing (DXF, DWG) rather than exported as an image.
 fn is_drawing_file(path: &str) -> bool {
     let ext = std::path::Path::new(path).extension().map(|e| e.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
-    matches!(ext.as_str(), "dxf" | "dwg" | "dwt" | "")
+    matches!(ext.as_str(), "dxf" | "dwg" | "stl" | "dwt" | "")
 }
 
 /// Say on the command line what the file couldn't keep, and list it in the result's `notSaved`.
